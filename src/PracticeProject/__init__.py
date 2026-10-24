@@ -3,17 +3,13 @@
     localhost:5000.
 '''
 
-from flask import Flask, render_template, request
-from SentimentAnalysis.sentiment_analysis import sentiment_analyzer
-
-# constants
-TEXT_MISSING="Text is required"
-TEXT_EMPTY="Text is required, cannot be an empty string"
-TEXT_DIGIT="Text cannot be only digit/numerical value"
-WATSON_ISSUE="Invalid input ! Try again"
-RESULT_STR="The given text has been identified as {} with a score of {}"
+import os
+from flask import Flask
+from flask_wtf.csrf import CSRFProtect
 
 app = Flask("Sentiment Analyzer")
+app.secret_key = str(os.environ['WTF_CSRF_SECRET_KEY'])
+csrf = CSRFProtect(app)
 
 @app.route("/api/sentimentAnalyzer")
 def sent_analyzer():
