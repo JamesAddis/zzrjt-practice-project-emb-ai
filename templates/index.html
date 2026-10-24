@@ -12,21 +12,22 @@
     <div class="card">
         <div class="card-body">
             <h1 class="center-heading">NLP - Sentiment Analysis using BERT</h1> 
-            <div style="padding: 25px 25px 25px 25px;">
-            <h2 class="mb-3">
-                <label class="form-label">Please enter the text to be analyzed</label>
-                <input type="textarea" class="form-control" id="textToAnalyze">
-            </h2>
+            <div style="padding: 25px 25px 25px 25px;"></div>
+            <form method="POST" action="/">
+                <h2 class="mb-3">
+                    <label for="textToAnalyze" class="form-label">Please enter the text to be analyzed</label>
+                    <input type="textarea" required name="textToAnalyze" class="form-control" id="textToAnalyze" value="{{text_to_analyze}}" />
+                </h2>
 
-            <div style="padding: 25px 25px 25px 25px;">
-                <button onclick="RunSentimentAnalysis()" class="btn btn-secondary">Run Sentiment Analysis</button>
-            </div>
+                <div style="padding: 25px 25px 25px 25px;">
+                    <button class="btn btn-secondary">Run Sentiment Analysis</button>
+                </div>
+            <form>
             <div style="padding: 25px 25px 25px 25px;"></div>
             <h2 class="mb-3">
-                <label class="form-label">Result of Sentiment Analysis</label>
+                <label for="system_response" class="form-label">Result of Sentiment Analysis</label>
             </h2>
-
-            <div id="system_response" style="padding: 25px 25px 25px 25px;"></div>
+            <div id="system_response"{% if is_error %}class="text-danger"{% endif %} style="padding: 25px 25px 25px 25px;">{{sentiment_analysis_result}}</div>
         </div>
     </div>
 </body>
