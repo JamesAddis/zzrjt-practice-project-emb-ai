@@ -1,0 +1,114 @@
+suite: test service setup
+templates:
+  - deployment.yaml
+tests:
+  - it: should use tag when digest not set
+    set:
+      image.tag: tester
+      image.digest: ""
+    asserts:
+      - isKind:
+          of: Deployment
+      - matchRegex:
+          path: metadata.name
+          pattern: -my-chart$
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: nginx:tester
+  - it: should use digest
+    set:
+      image.tag: tester
+      image.digest: sha256:e2fd96aab9f74037ccbf7200f9512b02a999d47331acb8a23aee034a7abc4c3b
+    asserts:
+      - isKind:
+          of: Deployment
+      - matchRegex:
+          path: metadata.name
+          pattern: -my-chart$
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: nginx@sha256:e2fd96aab9f74037ccbf7200f9512b02a999d47331acb8a23aee034a7abc4c3b
+  - it: should add apparmor profile set to use
+    set:
+      image.tag: latest
+    asserts:
+      - isKind:
+          of: Deployment
+      - matchRegex:
+          path: metadata.name
+          pattern: -my-chart$
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: nginx:latest
+  - it: should add apparmor profile set to create apparmor
+    set:
+      image.tag: latest
+    asserts:
+      - isKind:
+          of: Deployment
+      - matchRegex:
+          path: metadata.name
+          pattern: -my-chart$
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: nginx:latest
+  - it: should add seccomp profile set to use
+    set:
+      image.tag: latest
+    asserts:
+      - isKind:
+          of: Deployment
+      - matchRegex:
+          path: metadata.name
+          pattern: -my-chart$
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: nginx:latest
+  - it: should add seccomp profile set to create
+    set:
+      image.tag: latest
+    asserts:
+      - isKind:
+          of: Deployment
+      - matchRegex:
+          path: metadata.name
+          pattern: -my-chart$
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: nginx:latest
+  - it: should set filesystem as readonly if hardened
+    set:
+      image.tag: latest
+    asserts:
+      - isKind:
+          of: Deployment
+      - matchRegex:
+          path: metadata.name
+          pattern: -my-chart$
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: nginx:latest
+  - it: should create empty dirs for for /var/logs, tmp, and /var/lib
+    set:
+      image.tag: latest
+    asserts:
+      - isKind:
+          of: Deployment
+      - matchRegex:
+          path: metadata.name
+          pattern: -my-chart$
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: nginx:latest
+  - it: should create /etc/practice-project as projected volume with read only options
+    set:
+      image.tag: latest
+    asserts:
+      - isKind:
+          of: Deployment
+      - matchRegex:
+          path: metadata.name
+          pattern: -my-chart$
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: nginx:latest

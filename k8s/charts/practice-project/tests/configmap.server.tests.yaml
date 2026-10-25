@@ -1,19 +1,62 @@
-suite: test deployment
+suite: test ConfigMap adds setting for python app correctly
 templates:
-  - deployment.yaml
+  - templates/_helper.tpl
+  - templates/configmap.yaml
+includeCrds: true
+values:
+  - values.yaml
+release:
+  name: my-release
+  namespace: my-namespace
+  revision: 1
+  upgrade: true
+chart:
+  version: 1.0.0
+  appVersion: 1.0.0
 tests:
-  - it: should use tag when digest not set
+  - it: should setup egress to dns request server with AI fqdn
     set:
-      image.tag: tester
-      image.digest: ""
+      globals.cilium.enabled: true
+      ai.endpoint: test.ai.example.internal
     asserts:
       - isKind:
-          of: Deployment
+          of: CiliumNetworkPolicy
       - matchRegex:
-          path: metadata.name
+          path: specs
           pattern: -my-chart$
       - equal:
-          path: spec.template.spec.containers[0].image
+          path: egress[0].rules[*].ports[0].rules.dns[*]
+          value: test.ai.example.internal
+  
+  - it: should setup egress to ai FQDN endpoint
+    set:
+      globals.cilium.enabled: true
+      ai.endpoint: test.ai.example.internal
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - matchRegex:
+          path: specs
+          pattern: -my-chart$
+      - equal:
+          path: egress[0].rules[@_.toFQDNs[*].matchName == "test.ai.example.internal"]
+          value: test.ai.example.internal
+      - equal:
+          path: egress[0].rules[@_.toFQDNs[*].matchName == "test.ai.example.internal"].ports[*].ports
+          value: test.ai.example.internal
+  
+  - it: should setup egress to dns request server with AI fqdn
+    set:
+      globals.cilium.enabled: true
+      ai.endpoint: different.ai.example.lan
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - matchRegex:
+          path: specs
+          pattern: -my-chart$
+      - equal:
+          path: egress[0].rules[*].ports[0].rules.dns[*]
           value: nginx:tester
   - it: should use digest
     set:

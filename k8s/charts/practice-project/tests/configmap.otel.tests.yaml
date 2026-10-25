@@ -1,6 +1,18 @@
 suite: test ConfigMap adds setting for python app correctly
 templates:
-  - configmap.yaml
+  - templates/_helper.tpl
+  - templates/configmap.yaml
+includeCrds: true
+values:
+  - values.yaml
+release:
+  name: my-release
+  namespace: my-namespace
+  revision: 1
+  upgrade: true
+chart:
+  version: 1.0.0
+  appVersion: 1.0.0
 tests:
   - it: should setup egress to dns request server with AI fqdn
     set:
