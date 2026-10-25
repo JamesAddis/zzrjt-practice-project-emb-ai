@@ -1,0 +1,438 @@
+suite: test Host firewall CiliumClusterwideNetworkpolicy includes external AI services
+templates:
+  - templates/_helper.tpl
+  - templates/ciliumclusterwidenetworkpolicy.yaml
+includeCrds: true
+values:
+  - values.yaml
+release:
+  name: my-release
+  namespace: my-namespace
+  revision: 1
+  upgrade: true
+chart:
+  version: 1.0.0
+  appVersion: 1.0.0
+set:
+  cilium.enabled: true
+  cilium.hostPolicy.enabled: true
+  cilium.hostPolicy.ai: true
+tests:
+  - it: should setup egress to ai FQDN endpoint 
+    set:
+      ai.endpoint: test.ai.lan
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "test.ai.lan"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "test.ai.lan"
+            toPorts:
+              - ports:
+                  - port: "80"
+                    protocol: "TCP"
+                  - port: "80"
+                    protocol: "UDP"
+                  - port: "443"
+                    protocol: "TCP"
+                  - port: "443"
+                    protocol: "UDP"
+          count: 1
+          any: false
+
+  - it: should setup egress to ai FQDN endpoint with prefix
+    set:
+      ai.endpoint: test.ai.lan/openai
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "test.ai.lan"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "test.ai.lan"
+            toPorts:
+              - ports:
+                  - port: "80"
+                    protocol: "TCP"
+                  - port: "80"
+                    protocol: "UDP"
+                  - port: "443"
+                    protocol: "TCP"
+                  - port: "443"
+                    protocol: "UDP"
+          count: 1
+          any: false
+
+  - it: should setup egress to ai http FQDN endpoint 
+    set:
+      ai.endpoint: http://test.ai.example.internal
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "test.ai.example.internal"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "test.ai.example.internal"
+            toPorts:
+              - ports:
+                  - port: "80"
+                    protocol: "TCP"
+                  - port: "80"
+                    protocol: "UDP"
+          count: 1
+          any: false
+  
+  - it: should setup egress to ai https FQDN endpoint
+    set:
+      ai.endpoint: https://different.test.example.com
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "different.test.example.com"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "different.test.example.com"
+            toPorts:
+              - ports:
+                  - port: "443"
+                    protocol: "TCP"
+                  - port: "443"
+                    protocol: "UDP"
+          count: 1
+          any: false
+  
+  - it: should setup egress to ai with custom port FQDN endpoint (test.ai.example.internal)
+    set:
+      ai.endpoint: extra-fine.lan:6666
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "extra-fine.lan"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "extra-fine.lan"
+            toPorts:
+              - ports:
+                  - port: "6666"
+                    protocol: "TCP"
+                  - port: "6666"
+                    protocol: "UDP"
+          count: 1
+          any: false
+  
+  - it: should setup egress to ai with https custom port FQDN endpoint (test.ai.example.internal)
+    set:
+      ai.endpoint: https://completely-different.lan:5053
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "completely-different.lan"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "completely-different.lan"
+            toPorts:
+              - ports:
+                  - port: "5053"
+                    protocol: "TCP"
+                  - port: "5053"
+                    protocol: "UDP"
+          count: 1
+          any: false
+
+  - it: should setup egress to ai CIDR endpoint
+    set:
+      ai.endpoint: 10.2.2.50
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "10.2.2.50"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "10.2.2.50"
+            toPorts:
+              - ports:
+                  - port: "80"
+                    protocol: "TCP"
+                  - port: "80"
+                    protocol: "UDP"
+                  - port: "443"
+                    protocol: "TCP"
+                  - port: "443"
+                    protocol: "UDP"
+          count: 1
+          any: false
+  
+  - it: should setup egress to ai CIDR endpoint with prefix
+    set:
+      ai.endpoint: 10.2.2.50/prefix234
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "10.2.2.50"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "10.2.2.50"
+            toPorts:
+              - ports:
+                  - port: "80"
+                    protocol: "TCP"
+                  - port: "80"
+                    protocol: "UDP"
+                  - port: "443"
+                    protocol: "TCP"
+                  - port: "443"
+                    protocol: "UDP"
+          count: 1
+          any: false
+  
+  - it: should setup egress to ai http CIDR endpoint
+    set:
+      ai.endpoint: http://172.16.20.20
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "172.16.20.20"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "172.16.20.20"
+            toPorts:
+              - ports:
+                  - port: "80"
+                    protocol: "TCP"
+                  - port: "80"
+                    protocol: "UDP"
+          count: 1
+          any: false
+  
+  - it: should setup egress to ai https CIDR endpoint
+    set:
+      ai.endpoint: https://172.16.20.20
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "172.16.20.20"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "172.16.20.20"
+            toPorts:
+              - ports:
+                  - port: "443"
+                    protocol: "TCP"
+                  - port: "443"
+                    protocol: "UDP"
+          count: 1
+          any: false
+  
+  - it: should setup egress to ai with custom port CIDR endpoint
+    set:
+      ai.endpoint: 192.168.100.42:4545
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              -  192.168.100.42
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              -  192.168.100.42
+            toPorts:
+              - ports:
+                  - port: "4545"
+                    protocol: "TCP"
+                  - port: "4545"
+                    protocol: "UDP"
+          count: 1
+          any: false
+  
+  - it: should setup egress to ai with http custom port CIDR endpoint (test.ai.example.internal)
+    set:
+      ai.endpoint: http://10.250.23.23:6666
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "10.250.23.23"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "10.100.1.1"
+            toPorts:
+              - ports:
+                  - port: "6666"
+                    protocol: "TCP"
+                  - port: "6666"
+                    protocol: "UDP"
+          count: 1
+          any: false
+  
+  - it: should setup egress to ai with https custom port FQDN endpoint
+    set:
+      ai.endpoint: https://10.100.1.1:5053
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "10.100.1.1"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "10.100.1.1"
+            toPorts:
+              - ports:
+                  - port: "5053"
+                    protocol: "TCP"
+                  - port: "5053"
+                    protocol: "UDP"
+          count: 1
+          any: false

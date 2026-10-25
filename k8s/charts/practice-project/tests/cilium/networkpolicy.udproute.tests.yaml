@@ -1,0 +1,49 @@
+suite: test Pod firewall CiliumNetworkpolicy includes ingress for udproute
+templates:
+  - templates/_helper.tpl
+  - templates/ciliumnetworkpolicy.yaml
+includeCrds: true
+values:
+  - values.yaml
+release:
+  name: my-release
+  namespace: my-namespace
+  revision: 1
+  upgrade: true
+chart:
+  version: 1.0.0
+  appVersion: 1.0.0
+set: 
+  http3: true
+  udpRoute.enabled: true
+  cilium.enabled: true
+  cilium.networkPolicy.enabled: true
+  cilium.networkPolicy.udpRoute.enabled: true
+tests:
+  - it: should setup ingress for UDPRoute handler
+    set:
+      cilium.udpRoute.selectors:
+        - matchLabels:
+            test: test
+        - matchExpressions:
+            - key: tester
+              operator: Exists
+      udpRoute.hostnames:
+        - practice-project.host.internal
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+  - it: should setup ingress for UDPRoute different
+    set:
+      cilium.udpRoute.selectors:
+        - matchLabels:
+            test: test
+        - matchExpressions:
+            - key: tester
+              operator: Exists
+      udpRoute.hostnames:
+        - another-bubba.example.com
+        - bubba.example.com
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy

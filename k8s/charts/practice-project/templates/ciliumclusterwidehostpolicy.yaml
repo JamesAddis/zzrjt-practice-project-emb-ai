@@ -1,0 +1,88 @@
+{{-if and .Values.cilium.enabled .Values.cilium.hostPolicy.enabled (or .Values.cilium.hostPolicy.ai .Values.cilium.hostPolicy.oidc .Values.cilium.hostPolicy.otel)-}}
+apiVersion: "cilium.io/v2"
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: {{ print .Chart.namespace "-" (include "practice-project.fullname" .) | quote }}
+  labels:
+    {{- include "practice-project.labels" . | nindent 4 }}
+specs:
+  {{-range $i, $value:= .Values.cilium.hostPolicy.egressSelector-}}
+  {{-if .Values.cilium.hostPolicy.ai -}}
+  - description: "Host egress to external AI Endpoint (nodeselector: {{$i}})"
+    nodeSelector:
+      {{ toYaml $value | nident 6 }}
+    egress:
+      - toCIDRs:
+          - {{.Values.ai.endpoint | quote}}
+        toPorts:
+          - ports:
+              {{-range $aiPorts-}}
+              - port: {{. | quote}}
+                protocol: TCP
+              - port: {{. | quote}}
+                protocol: UDP
+              {{-end-}}
+      - toFQDNs:
+          - matchName: {{$aiFqdn | quote}}
+        toPorts:
+          - ports:
+              {{-range $aiPorts-}}
+              - port: {{. | quote}}
+                protocol: TCP
+              - port: {{. | quote}}
+                protocol: UDP
+              {{-end-}}
+  {{-end-}}
+  {{-if .Values.cilium.hostPolicy.otel -}}
+  - description: Host egress to external OTEL Endpoint
+    nodeSelector:
+      {{ toYaml $value | nident 6 }}
+    egress:
+      - toCIDRs:
+          - {{ .Values.otel.endpoint | quote}}
+        toPorts:
+          - ports:
+              {{-range $otelPorts-}}
+              - port: {{ . | quote}}
+                protocol: TCP
+              - port: {{ . | quote}}
+                protocol: UDP
+              {{-end-}}
+      - toFQDNs:
+          - matchName: {{$otelFqdn | quote}}
+        toPorts:
+          - ports:
+              {{-range $otelPorts-}}
+              - port: {{. | quote}}
+                protocol: TCP
+              - port: {{. | quote}}
+                protocol: UDP
+              {{-end-}}
+  {{-end-}}
+  {{-if .Values.cilium.hostPolicy.oidc -}}
+  - description: Host egress to external OIDC Endpoint
+    nodeSelector:
+      {{ toYaml $value | nident 6 }}
+    egress:
+      - toCIDRs:
+          - {{ .Values.oidc.endpoint | quote}}
+        toPorts:
+          - ports:
+              {{-range $oidcPorts-}}
+              - port: {{ . | quote}}
+                protocol: TCP
+              - port: {{ . | quote}}
+                protocol: UDP
+              {{-end-}}
+      - toFQDNs:
+          - matchName: {{$oidcFqdn | quote}}
+        toPorts:
+          - ports:
+              {{-range $oidcPorts-}}
+              - port: {{. | quote}}
+                protocol: TCP
+              - port: {{. | quote}}
+                protocol: UDP
+              {{-end-}}
+  {{-end-}}
+{{-end-}}

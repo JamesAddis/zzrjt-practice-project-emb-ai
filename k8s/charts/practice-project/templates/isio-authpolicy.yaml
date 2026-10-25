@@ -1,0 +1,2 @@
+{{-if and .Values.istio.enabled .Values.istio.authpolicy-}}
+{{-end-}}

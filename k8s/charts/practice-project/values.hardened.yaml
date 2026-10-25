@@ -1,0 +1,92 @@
+serviceAccount:
+  create: true
+  automount: false
+runtimeClassName: gvisor
+podSecurityContext:
+  fsGroup: 2000
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: var-tmp
+    emptyDir: {}
+  - name: var-log
+    emptyDir: {}
+
+volumeMounts:
+  - name: tmp
+    mountPath: /tmp
+  - name: var-tmp
+    mountPath: /var/tmp
+  - name: var-log
+    mountPath: /var/log
+
+sops:
+  enabled: true
+  apparmor: 
+    create: true
+  seccomp: 
+    create: true
+cilium:
+  enabled: true
+  networkPolicy:
+    enabled: true
+    ai: true
+    dns:
+      enabled: true
+      patterns: []
+    otel: true
+    oidc: true
+    konnectivity: false
+    gateway: false
+    ingress:
+      selectors: []
+    httpRoute:
+      enabled: true
+      selectors: []
+    udpRoute:
+      enabled: true
+      selectors: []
+    cidrGroups:
+      enabled: true
+      selectors: []
+  hostPolicy:
+    enabled: false
+    ai: true
+    otel: true
+    oidc: true
+    egressSelectors: []
+networkPolicy:
+  enabled: false
+  httpRoute:
+    enabled: true
+    selectors: []
+  udpRoute:
+    enabled: true
+    selectors: []
+  ai:
+    enabled: true
+    selectors: []
+  otel:
+    enabled: true
+    selectors: []
+  oidc:
+    enabled: true
+    selectors: []
+spire:
+  enabled: true

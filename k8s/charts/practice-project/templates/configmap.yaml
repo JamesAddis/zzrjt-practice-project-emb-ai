@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "practice-project.fullname" . }}
+  labels:
+    {{- include "practice-project.labels" . | nindent 4 }}
+data:
+  app.yaml: |
+    server:
+      port: {{ .Values.service.port | default 80  }}
+    ai:
+      endpoint: {{ .Values.endpoint | quote }}
+      headers:
+        {{toYaml .Values.ai.headers | nident 8 }}
+    {{-if .Values.otel.enabled-}}
+    otel:  
+      enabled: true
+      endpoint: {{ .Values.otel.endpoint | quote }}
+      headers:
+        {{toYaml .Values.otel.headers | nident 8 }}
+    {{-end-}}
+    {{-if .Values.oidc.enabled-}}
+    oidc:  
+      enabled: true
+      endpoint: {{ .Values.oidc.endpoint | quote }}
+      headers:
+        {{toYaml .Values.oidc.headers | nident 8 }}
+    {{-end-}}

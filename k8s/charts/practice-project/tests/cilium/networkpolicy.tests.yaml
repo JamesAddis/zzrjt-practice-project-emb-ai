@@ -1,0 +1,40 @@
+suite: test Pod firewall CiliumNetworkpolicy includes OTEL endpoint
+templates:
+  - templates/_helper.tpl
+  - templates/ciliumnetworkpolicy.yaml
+includeCrds: true
+values:
+  - values.yaml
+release:
+  name: my-release
+  namespace: my-namespace
+  revision: 1
+  upgrade: true
+chart:
+  version: 1.0.0
+  appVersion: 1.0.0
+set:
+  cilium.enabled: true
+  cilium.hostPolicy.enabled: true
+tests:
+  - it: should not exist if cilium not enabled
+    set:
+      cilium.enabled: false
+    asserts:
+      - notFailedTemplate: {}
+      - hasDocuments:
+          count: 0
+  - it: should not exist if cilium network policy not enabled
+    set:
+      cilium.hostPolicy.enabled: false
+    asserts:
+      - notFailedTemplate: {}
+      - hasDocuments:
+          count: 0
+  - it: should exist if cilium network policy and cilium enabled
+    asserts:
+      - notFailedTemplate: {}
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: CiliumNetworkPolicy

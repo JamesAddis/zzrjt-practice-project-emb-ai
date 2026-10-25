@@ -1,0 +1,2 @@
+{{-if and .Values.sops.enabled .Values.sops.seccomp.create-}}
+{{-end-}}

@@ -1,0 +1,149 @@
+# todo ingress from kube-apiserver
+# todo ingress from gateway
+# todo egress to kube-dns
+# todo egress to AI services
+# todo egress to OTEL services
+# todo egress to OIDC services
+{{-if .Values.networkPolicy.enabled-}}
+{{-if .Values.networkPolicy.defaultDeny -}}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ print (include "practice-project.fullname" .) "-default-deny" }}
+  labels:
+    {{- include "practice-project.labels" . | nindent 4 }}
+spec:
+  description: Default Deny for Practice Project
+  podSelector:
+    - matchLabels:
+        {{- include "practice-project.labels" . | nindent 8 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  egress: []
+  inggress: []
+{{-end-}}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "practice-project.fullname" . }}
+  labels:
+    {{- include "practice-project.labels" . | nindent 4 }}
+spec:
+  description: Pod Firewalls for Practice Projects
+  policyTypes:
+    - Ingress
+    - Egress
+  podSelector:
+    - matchLabels:
+        {{- include "practice-project.labels" . | nindent 8 }}
+  ingress:
+    - from:
+        # K8s API Server
+        - podSelector:
+            matchLabels:
+              k8s-app: kube-apiserver
+          namespaceSelector:
+            matchLabels:  
+              kubernetes.io/metadata.name: kube-system
+        {{-if .Values.networkPolicy.konnectivity.enabled-}}
+        # Konnectivity
+        - podSelector:
+            matchLabels:
+              k8s-app: konnectivity-agent
+          namespaceSelector:
+            matchLabels:  
+              kubernetes.io/metadata.name: kube-system
+        {{-end-}}   
+        {{-if and .Values.knative.enabled .Values.networkPolicy.knative.enabled-}}
+        # Knative
+        {{-if empty .Values.networkPolicy.knative.selectors-}}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: knative
+        {{-else-}}
+        {{ toYaml .Values.networkPolicy.knative.selectors | nident 8}}
+        {{-end-}}
+        {{-end-}}
+        {{-if .Values.networkPolicy.ingress.selectors-}}
+        {{ toYaml .Values.networkPolicy.knative.selectors | nident 8}}
+        {{-end-}}
+      ports:
+        - port: "http"
+          protocol: TCP
+        {{-if .Values.http3-}}
+        - port: "http3"
+          protocol: UDP
+        {{-end-}}
+    {{-end-}}
+    {{-if and .Values.http3 .Values.udpRoute.enabled .Values.networkPolicy.udpRoute.enabled-}}
+    - from:
+        {{ toYaml .Values.networkPolicy.udpRoute.selectors | nident 8}}
+      ports:
+        - port: "http3"
+          protocol: UDP
+    {{-end-}}
+    {{-if and .Values.httpRoute.enabled .Values.networkPolicy.httpRoute.enabled-}}
+    - from:
+        {{ toYaml .Values.networkPolicy.httpRoute.selectors | nident 8}}
+      ports:
+        - port: "http"
+          protocol: TCP
+        {{-if .Values.http3-}}
+        # future proofing
+        - port: "http3"
+          protocol: UDP
+        {{-end-}}
+    {{-end-}}
+  egress:
+    # Kube DNS
+    - to:
+        - podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+          namespaceSelector:
+            matchLabels:
+      ports:
+        - protocol: TCP
+          port: dns-tcp
+        - protocol: UDP
+          port: dns-udp
+    {{-if .Values.networkPolicy.oidc.enabled-}}
+    # OIDC
+    - to:
+        - ipBlock:
+      ports:
+        {{-range $oidcPorts-}}
+        - protocol: TCP
+          port: {{.}}
+        - protocol: UDP
+          port: {{.}}
+        {{-end-}}
+    {{-end-}}
+    {{-if .Values.networkPolicy.otel.enabled-}}
+    # OTEL
+    - to:
+        - ipBlock:
+      ports:
+        {{-range $otelPorts-}}
+        - protocol: TCP
+          port: {{.}}
+        - protocol: UDP
+          port: {{.}}
+        {{-end-}}
+    {{-end-}}
+    {{-if .Values.networkPolicy.ai.enabled-}}
+    # AI Endpoint
+    - to:
+        - ipBlock:
+      ports:
+        {{-range $aiPorts-}}
+        - protocol: TCP
+          port: {{.}}
+        - protocol: UDP
+          port: {{.}}
+        {{-end-}}
+    {{-end-}}
+{{-end-}}

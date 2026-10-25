@@ -1,0 +1,276 @@
+suite: test Pod firewall CiliumNetworkpolicy includes DNS requests
+templates:
+  - templates/_helper.tpl
+  - templates/ciliumnetworkpolicy.yaml
+includeCrds: true
+values:
+  - values.yaml
+release:
+  name: my-release
+  namespace: my-namespace
+  revision: 1
+  upgrade: true
+chart:
+  version: 1.0.0
+  appVersion: 1.0.0
+set: 
+  cilium.enabled: true
+  cilium.networkPolicy.enabled: true
+  cilium.networkPolicy.dns.enabled: true
+  cilium.networkPolicy.ai: true
+  cilium.networkPolicy.otel: true
+  cilium.networkPolicy.oidc: true
+  oidc.enabled: true
+  otel.enabled: true
+  ai.endpoint: test.ai.lan:4040/ewqqwe
+  otel.endpoint: https://different.otel.example.com/test
+  oidc.endpoint: http://basic.oidc.io
+tests:
+  - it: should not setup egress for DNS requests if dns disabled
+    set:
+      cilium.networkPolicy.enabled: false
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - notContains:
+          path: specs[*].egress
+          content:
+            toEndpoints:
+              - matchLabels:
+                  k8s:io.kubernetes.pod.namespace: kube-system
+                  k8s-app: kube-dns
+          any: true
+  - it: should not setup egress for DNS requests not if there is no fqdns
+    set:
+      ai.endpoint: 10.0.0.1:4040
+      otel.endpoint: 192.168.1.1
+      oidc.endpoint: 8.8.8.8
+      cilium.networkPolicy.dns.patterns: []
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - notContains:
+          path: specs[*].egress
+          content:
+            toEndpoints:
+              - matchLabels:
+                  k8s:io.kubernetes.pod.namespace: kube-system
+                  k8s-app: kube-dns
+          any: true
+  - it: should setup egress for DNS requests AI+OTEL+OIDC all fqdn (different set)
+    set:
+      ai.endpoint: different-completely.com/heavenly
+      otel.endpoint: otel.basic.example
+      oidc.endpoint: http://auth.main.co.uk/oidc
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toEndpoints:
+              - matchLabels:
+                  k8s:io.kubernetes.pod.namespace: kube-system
+                  k8s-app: kube-dns
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toEndpoints:
+              - matchLabels:
+                  k8s:io.kubernetes.pod.namespace: kube-system
+                  k8s-app: kube-dns
+            toPorts:
+              - ports:
+                  - port: "dns-tcp"
+                    protocol: "TCP"
+                  - port: "dns-udp"
+                    protocol: "UDP"
+                rules:
+                  dns:
+                    - matchName: "different-completely.com"
+                    - matchName: "otel.basic.example"
+                    - matchName: "auth.main.co.uk"
+          count: 1
+          any: false
+  - it: should setup egress for DNS requests if only patterns
+    set:
+      ai.endpoint: 10.0.0.1:4040
+      otel.endpoint: 192.168.1.1
+      oidc.endpoint: 8.8.8.8
+      cilium.networkPolicy.dns.patterns:
+        - "*.basic.test"
+        - "auth.*.our-site.co.uk"
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toEndpoints:
+              - matchLabels:
+                  k8s:io.kubernetes.pod.namespace: kube-system
+                  k8s-app: kube-dns
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toEndpoints:
+              - matchLabels:
+                  k8s:io.kubernetes.pod.namespace: kube-system
+                  k8s-app: kube-dns
+            toPorts:
+              - ports:
+                  - port: "dns-tcp"
+                    protocol: "TCP"
+                  - port: "dns-udp"
+                    protocol: "UDP"
+                rules:
+                  dns:
+                    - matchPattern: "*.basic.test"
+                    - matchPattern: "auth.*.our-site.co.uk"
+          count: 1
+          any: false
+  - it: should setup egress for DNS requests for FQDNs and patterns
+    set:
+      ai.endpoint: different-completely.com/heavenly
+      otel.endpoint: otel.basic.example
+      oidc.endpoint: http://auth.main.co.uk/oidc
+      cilium.networkPolicy.dns.patterns:
+        - "*.basic.test"
+        - "auth.*.our-site.co.uk"
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toEndpoints:
+              - matchLabels:
+                  k8s:io.kubernetes.pod.namespace: kube-system
+                  k8s-app: kube-dns
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toEndpoints:
+              - matchLabels:
+                  k8s:io.kubernetes.pod.namespace: kube-system
+                  k8s-app: kube-dns
+            toPorts:
+              - ports:
+                  - port: "dns-tcp"
+                    protocol: "TCP"
+                  - port: "dns-udp"
+                    protocol: "UDP"
+                rules:
+                  dns:
+                    - matchName: "different-completely.com"
+                    - matchName: "otel.basic.example"
+                    - matchName: "auth.main.co.uk"
+                    - matchPattern: "*.basic.test"
+                    - matchPattern: "auth.*.our-site.co.uk"
+          count: 1
+          any: false
+  - it: should setup egress for DNS requests OTEL+OIDC (AI is CIDR)
+    set:
+      ai.endpoint: 10.0.0.1:4040/ewqqwe
+      otel.endpoint: https://different.otel.example.com/test
+      oidc.endpoint: http://basic.oidc.io
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toEndpoints:
+              - matchLabels:
+                  k8s:io.kubernetes.pod.namespace: kube-system
+                  k8s-app: kube-dns
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toEndpoints:
+              - matchLabels:
+                  k8s:io.kubernetes.pod.namespace: kube-system
+                  k8s-app: kube-dns
+            toPorts:
+              - ports:
+                  - port: "dns-tcp"
+                    protocol: "TCP"
+                  - port: "dns-udp"
+                    protocol: "UDP"
+                rules:
+                  dns:
+                    - matchName: "different.otel.example.com"
+                    - matchName: "basic.oidc.io"
+          count: 1
+          any: false
+  - it: should setup egress for DNS requests OTEL+OIDC (AI is CIDR)
+    set:
+      ai.endpoint: 10.0.0.1:4040/ewqqwe
+      otel.endpoint: https://192.168.1.1/test
+      oidc.endpoint: http://basic.oidc.io
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toEndpoints:
+              - matchLabels:
+                  k8s:io.kubernetes.pod.namespace: kube-system
+                  k8s-app: kube-dns
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toEndpoints:
+              - matchLabels:
+                  k8s:io.kubernetes.pod.namespace: kube-system
+                  k8s-app: kube-dns
+            toPorts:
+              - ports:
+                  - port: "dns-tcp"
+                    protocol: "TCP"
+                  - port: "dns-udp"
+                    protocol: "UDP"
+                rules:
+                  dns:
+                    - matchName: "basic.oidc.io"
+          count: 1
+          any: false

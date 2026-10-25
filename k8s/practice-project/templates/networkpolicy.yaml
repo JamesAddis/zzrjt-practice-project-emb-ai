@@ -1,5 +1,0 @@
-# todo ingress from kube-apiserver
-# todo ingress from gateway
-# todo egress to kube-dns
-# todo egress to ai services
-# todo egress to OTEL services

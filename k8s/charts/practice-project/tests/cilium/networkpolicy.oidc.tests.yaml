@@ -1,0 +1,486 @@
+suite: test Host firewall CiliumNetworkpolicy includes egress to oidc services
+templates:
+  - templates/_helper.tpl
+  - templates/ciliumnetworkpolicy.yaml
+includeCrds: true
+values:
+  - values.yaml
+release:
+  name: my-release
+  namespace: my-namespace
+  revision: 1
+  upgrade: true
+chart:
+  version: 1.0.0
+  appVersion: 1.0.0
+set: 
+  cilium.enabled: true
+  cilium.networkPolicy.enabled: true
+  cilium.httpRoute.enabled: true
+  oidc.enabled: true
+  cilium.networkPolicy.oidc.enabled: true
+tests:
+  - it: should setup egress to oidc FQDN endpoint 
+    set:
+      oidc.endpoint: test.oidc.lan
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "test.oidc.lan"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "test.oidc.lan"
+            toPorts:
+              - ports:
+                  - port: "80"
+                    protocol: "TCP"
+                  - port: "80"
+                    protocol: "UDP"
+                rules:
+                  http: [{}]
+              - ports:
+                  - port: "443"
+                    protocol: "TCP"
+                  - port: "443"
+                    protocol: "UDP"
+                serverNames:
+                  - "test.oidc.lan"
+                rules:
+                  http: [{}]
+          count: 1
+          any: false
+
+  - it: should setup egress to oidc FQDN endpoint with prefix
+    set:
+      oidc.endpoint: test.oidc.lan/openoidc
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "test.oidc.lan"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "test.oidc.lan"
+            toPorts:
+              - ports:
+                  - port: "80"
+                    protocol: "TCP"
+                  - port: "80"
+                    protocol: "UDP"
+                rules:
+                  http:
+                    - path: /openoidc
+                    - path: /openoidc/*
+              - ports:
+                  - port: "443"
+                    protocol: "TCP"
+                  - port: "443"
+                    protocol: "UDP"
+                serverNames:
+                  - "test.oidc.lan"
+                rules:
+                  http:
+                    - path: /openoidc
+                    - path: /openoidc/*
+          count: 1
+          any: false
+
+  - it: should setup egress to oidc http FQDN endpoint 
+    set:
+      oidc.endpoint: http://test.oidc.example.internal
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "test.oidc.example.internal"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "test.oidc.example.internal"
+            toPorts:
+              - ports:
+                  - port: "80"
+                    protocol: "TCP"
+                  - port: "80"
+                    protocol: "UDP"
+                rules:
+                  http: [{}]
+          count: 1
+          any: false
+  
+  - it: should setup egress to oidc https FQDN endpoint
+    set:
+      oidc.endpoint: https://different.test.example.com
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "different.test.example.com"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "different.test.example.com"
+            toPorts:
+              - ports:
+                  - port: "443"
+                    protocol: "TCP"
+                  - port: "443"
+                    protocol: "UDP"
+                serverNames:
+                  - "different.test.example.com"
+                rules:
+                  http: [{}]
+          count: 1
+          any: false
+  
+  - it: should setup egress to oidc with custom port FQDN endpoint (test.oidc.example.internal)
+    set:
+      oidc.endpoint: extra-fine.lan:6666
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "extra-fine.lan"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "extra-fine.lan"
+            toPorts:
+              - ports:
+                  - port: "6666"
+                    protocol: "TCP"
+                  - port: "6666"
+                    protocol: "UDP"
+                rules:
+                  http: [{}]
+          count: 1
+          any: false
+  
+  - it: should setup egress to oidc with https custom port FQDN endpoint (test.oidc.example.internal)
+    set:
+      oidc.endpoint: https://completely-different.lan:5053
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "completely-different.lan"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "completely-different.lan"
+            toPorts:
+              - ports:
+                  - port: "5053"
+                    protocol: "TCP"
+                  - port: "5053"
+                    protocol: "UDP"
+                serverNames:
+                  - "completely-different.lan"
+                rules:
+                  http: [{}]
+          count: 1
+          any: false
+
+  - it: should setup egress to oidc CIDR endpoint
+    set:
+      oidc.endpoint: 10.2.2.50
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "10.2.2.50"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "10.2.2.50"
+            toPorts:
+              - ports:
+                  - port: "80"
+                    protocol: "TCP"
+                  - port: "80"
+                    protocol: "UDP"
+                  - port: "443"
+                    protocol: "TCP"
+                  - port: "443"
+                    protocol: "UDP"
+                rules:
+                  http: [{}]
+          count: 1
+          any: false
+  
+  - it: should setup egress to oidc CIDR endpoint with custom prefix
+    set:
+      oidc.endpoint: 10.2.2.50/prefix234
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "10.2.2.50"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "10.2.2.50"
+            toPorts:
+              - ports:
+                  - port: "80"
+                    protocol: "TCP"
+                  - port: "80"
+                    protocol: "UDP"
+                  - port: "443"
+                    protocol: "TCP"
+                  - port: "443"
+                    protocol: "UDP"
+                rules:
+                  http:
+                    - path: /prefix234
+                    - path: /prefix234/*
+          count: 1
+          any: false
+  
+  - it: should setup egress to oidc http CIDR endpoint
+    set:
+      oidc.endpoint: http://172.16.20.20
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "172.16.20.20"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "172.16.20.20"
+            toPorts:
+              - ports:
+                  - port: "80"
+                    protocol: "TCP"
+                  - port: "80"
+                    protocol: "UDP"
+                rules:
+                  http: [{}]
+          count: 1
+          any: false
+  
+  - it: should setup egress to oidc https CIDR endpoint
+    set:
+      oidc.endpoint: https://172.16.20.20
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "172.16.20.20"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "172.16.20.20"
+            toPorts:
+              - ports:
+                  - port: "443"
+                    protocol: "TCP"
+                  - port: "443"
+                    protocol: "UDP"
+                rules:
+                  http: [{}]
+          count: 1
+          any: false
+  
+  - it: should setup egress to oidc with custom port CIDR endpoint
+    set:
+      oidc.endpoint: 192.168.100.42:4545
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              -  192.168.100.42
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              -  192.168.100.42
+            toPorts:
+              - ports:
+                  - port: "4545"
+                    protocol: "TCP"
+                  - port: "4545"
+                    protocol: "UDP"
+                rules:
+                  http: [{}]
+          count: 1
+          any: false
+  
+  - it: should setup egress to oidc with http custom port CIDR endpoint (test.oidc.example.internal)
+    set:
+      oidc.endpoint: http://10.250.23.23:6666
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "10.250.23.23"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "10.100.1.1"
+            toPorts:
+              - ports:
+                  - port: "6666"
+                    protocol: "TCP"
+                  - port: "6666"
+                    protocol: "UDP"
+                rules:
+                  http: [{}]
+          count: 1
+          any: false
+  
+  - it: should setup egress to oidc with https custom port FQDN endpoint
+    set:
+      oidc.endpoint: https://10.100.1.1:5053
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "10.100.1.1"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "10.100.1.1"
+            toPorts:
+              - ports:
+                  - port: "5053"
+                    protocol: "TCP"
+                  - port: "5053"
+                    protocol: "UDP"
+                rules:
+                  http: [{}]
+          count: 1
+          any: false
