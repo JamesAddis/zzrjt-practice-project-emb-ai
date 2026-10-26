@@ -1,1 +1,0 @@
-PERFORMANCE_TEST_SERVER="localhost:5000"
