@@ -5,6 +5,15 @@ metadata:
   name: {{ include "practice-project.fullname" . }}
   labels:
     {{- include "practice-project.labels" . | nindent 4 }}
+{{-$aiDetails:=(fromYaml (include "practice-project.route" .Values.ai.endpoint))-}}
+{{-$otelDetails:=(dict) -}}
+{{-$oidcDetails:=(dict) -}}
+{{- if and .Values.otel.enabled .Values.cilium.networkPolicy.otel -}}
+{{-$otelDetails=(fromYaml (include "practice-project.route" .Values.otel.endpoint))-}}
+{{-end-}}
+{{- if and .Values.oidc.enabled .Values.cilium.networkPolicy.oidc -}}
+{{-$oidcDetails:=(fromYaml (include "practice-project.route" .Values.oidc.endpoint))-}}
+{{-end-}}
 specs:
   - description: Allow Pod ingress access for Health checks
     endpointSelector:
@@ -47,6 +56,44 @@ specs:
               http:
                 - method: GET
                   path: /healthz
+  {{-if and .Values.keda.enabled .Values.cilium.networkPolicy.keda.enabled -}}
+  - description: Allow Pod ingress for KEDA
+    endpointSelector:
+      matchLabels:
+        {{ toYaml include "practice-project.cilium.selector" . | nident 8 }}
+    ingress:
+      - fromEndpoints:
+          {{ toYaml .Values.cilium.networkPolicy.keda.selectors | nident 10}}
+        toPorts:
+          - ports:
+              - port: "http"
+                protocol: TCP
+              {{-if  $.Values.http3-}}
+              - port: "http3"
+                protocol: UDP
+              {{-end-}}
+            rules:
+              http: [{}]
+  {{-end-}}
+  {{-if and .Values.knative.enabled .Values.cilium.networkPolicy.knative.enabled -}}
+  - description: Allow Pod ingress for Knative
+    endpointSelector:
+      matchLabels:
+        {{ toYaml include "practice-project.cilium.selector" . | nident 8 }}
+    ingress:
+      - fromEndpoints:
+          {{ toYaml .Values.cilium.networkPolicy.knative.selectors | nident 10}}
+        toPorts:
+          - ports:
+              - port: "http"
+                protocol: TCP
+              {{-if  $.Values.http3-}}
+              - port: "http3"
+                protocol: UDP
+              {{-end-}}
+            rules:
+              http: [{}]
+  {{-end-}}
   {{-if and .Values.httpRoute.enabled .Values.cilium.networkPolicy.httpRoute-}}
   - description: Allow Pod ingress for HTTPRoute
     endpointSelector:
@@ -59,10 +106,14 @@ specs:
           - ports:
               - port: "http"
                 protocol: TCP
+              {{-if  $.Values.http3-}}
+              - port: "http3"
+                protocol: UDP
+              {{-end-}}
             rules:
               http: [{}]
   {{-end-}}
-  {{-if and .Values.udpRoute.enabled .Values.cilium.networkPolicy.udpRoute-}}
+  {{-if and .Values.http3 .Values.udpRoute.enabled .Values.cilium.networkPolicy.udpRoute-}}
   - description: Allow Pod ingress for UDPRoute
     endpointSelector:
       matchLabels:
@@ -93,14 +144,14 @@ specs:
                 protocol: UDP
             rules:
               dns:
-                {{-if and .Values.cilium.networkPolicy.ai $aiFqdn-}}
-                - matchName: {{ $aiFqdn | quote}}
+                {{-if $aiDetails.fqdn -}}
+                - matchName: {{ $aiDetails.fqdn | quote}}
                 {{-end-}}
-                {{-if and .Values.otel.enabled .Values.cilium.networkPolicy.otel $otelFqdn-}}
-                - matchName: {{ $otelFqdn | quote}}
+                {{-if $otelDetails.fqdn -}}
+                - matchName: {{ $otelDetails.fqdn | quote}}
                 {{-end-}}
-                {{-if and .Values.oidc.enabled  .Values.cilium.networkPolicy.oidc $oidcFqdn-}}
-                - matchName: {{ $oidcFqdn | quote}}
+                {{-if $oidcDetails.fqdn-}}
+                - matchName: {{ $oidcDetails.fqdn | quote}}
                 {{-end-}}
                 {{-range .Values.cilium.networkPolicy.dns.patterns -}}
                 - matchPattern: {{ . | quote}}
@@ -112,65 +163,101 @@ specs:
       matchLabels:
         {{ toYaml include "practice-project.cilium.selector" . | nident 8 }}
     egress:
+      {{-if $aiDetails.ip-}}
       - toCIDRs:
-          - {{.Values.ai.endpoint | quote}}
+          - {{ $aiDetails.ip| quote}}
         toPorts:
           - ports:
-              {{-range $aiPorts-}}
+              {{-range $aiDetails.ports-}}
               - port: {{. | quote}}
                 protocol: TCP
+              {{- if $.Values.ai.http3-}}
               - port: {{. | quote}}
                 protocol: UDP
               {{-end-}}
+              {{-end-}}
             rules:
-              http: [{}]
+              http:
+              {{-if or (empty $aiDetails.path) (eq $aiDetails.path "/") -}}
+                - {}
+              {{-else-}}
+                - path: {{$aiDetails.path}}
+              {{-end-}}
+      {{-end-}}
+      {{-if $aiDetails.fqdn-}}
       - toFQDNs:
-          - matchName: {{$aiFqdn | quote}}
+          - matchName: {{$aiDetails.fqdn | quote}}
         toPorts:
           - ports:
-              {{-range $aiPorts-}}
+              {{-range $aiDetails.ports-}}
               - port: {{. | quote}}
                 protocol: TCP
+              {{- if $.Values.ai.http3-}}
               - port: {{. | quote}}
                 protocol: UDP
               {{-end-}}
-            servers:
-              - {{ $aiFqdn | quote}}
+              {{-end-}}
+            serverNames:
+              - {{ $aiDetails.fqdn | quote}}
             rules:
-              http: [{}]
+              http:
+              {{-if or (empty $aiDetails.path) (eq $aiDetails.path "/") -}}
+                - {}
+              {{-else-}}
+                - path: {{$aiDetails.path}}
+              {{-end-}}
+      {{-end-}}
   {{-end-}}
-  {{-if .Values.cilium.networkPolicy.otel-}}
+  {{-if $otelDetails-}}
   - description: Pod egress to OTEL Endpoint
     endpointSelector:
       matchLabels:
         {{ toYaml include "practice-project.cilium.selector" . | nident 8 }}
     egress:
+      {{-if  $otelDetails.ip -}}
       - toCIDRs:
-          - {{.Values.otel.endpoint | quote}}
+          - {{ $otelDetails.ip | quote}}
         toPorts:
           - ports:
-              {{-range $otelPorts-}}
+              {{-range $otelDetails.ports-}}
               - port: {{. | quote}}
                 protocol: TCP
+              {{- if $.Values.otel.http3-}}
               - port: {{. | quote}}
                 protocol: UDP
               {{-end-}}
+              {{-end-}}
             rules:
-              http: [{}]
+              http:
+              {{-if or (empty $otelDetails.path) (eq $otelDetails.path "/") -}}
+                - {}
+              {{-else-}}
+                - path: {{$otelDetails.path}}
+              {{-end-}}
+      {{-end-}}
+      {{-if  $otelDetails.fqdn -}}
       - toFQDNs:
-          - matchName: {{$otelFqdn | quote}}
+          - matchName: {{$otelDetails.fqdn | quote}}
         toPorts:
           - ports:
-              {{-range $otelPorts-}}
+              {{-range $otelDetails.ports-}}
               - port: {{. | quote}}
                 protocol: TCP
+              {{- if $.Values.otel.http3-}}
               - port: {{. | quote}}
                 protocol: UDP
               {{-end-}}
-            servers:
-              - {{ $otelFqdn | quote}}
+              {{-end-}}
+            serverNames:
+              - {{ $otelDetails.fqdn | quote}}
             rules:
-              http: [{}]
+              http:
+              {{-if or (empty $otelDetails.path) (eq $otelDetails.path "/") -}}
+                - method: POST
+              {{-elseGET-}}
+                - path: {{$otelDetails.path}}
+                  method: POST
+              {{-end-}}
   {{-end-}}
   {{-if .Values.cilium.networkPolicy.oidc-}}
   - description: Pod egress to OIDC Endpoint
@@ -178,31 +265,51 @@ specs:
       matchLabels:
         {{ toYaml include "practice-project.cilium.selector" . | nident 8 }}
     egress:
+      {{-if  $oidcDetails.ip -}}
       - toCIDRs:
-          - {{.Values.oidc.endpoint | quote}}
+          - {{ $oidcDetails.ip | quote}}
         toPorts:
           - ports:
-              {{-range $oidcPorts-}}
+              {{-range $oidcDetails.ports-}}
               - port: {{. | quote}}
                 protocol: TCP
+              {{- if $.Values.oidc.http3-}}
               - port: {{. | quote}}
                 protocol: UDP
               {{-end-}}
+              {{-end-}}
             rules:
-              http: [{}]
+              http:
+              {{-if or (empty $oidcDetails.path) (eq $oidcDetails.path "/") -}}
+                - {}
+              {{-else-}}
+                - path: {{print $oidcDetails.path | quote }}
+                - path: {{print $oidcDetails.path "/*" | quote}}
+              {{-end-}}
+      {{-end-}}
+      {{-if  $oidcDetails.fqdn -}}
       - toFQDNs:
-          - matchName: {{$oidcFqdn | quote}}
+          - matchName: {{$oidcDetails.fqdn | quote}}
         toPorts:
           - ports:
-              {{-range $oidcPorts-}}
+              {{-range $oidcDetails.ports-}}
               - port: {{. | quote}}
                 protocol: TCP
+              {{- if $.Values.oidc.http3-}}
               - port: {{. | quote}}
                 protocol: UDP
               {{-end-}}
-            servers:
-              - {{ $oidcFqdn | quote}}
+              {{-end-}}
+            serverNames:
+              - {{ $oidDetails.fqdn | quote}}
             rules:
-              http: [{}]
+              http:
+              {{-if or (empty $oidcDetails.path) (eq $oidcDetails.path "/") -}}
+                - {}
+              {{-else-}}
+                - path: {{print $oidcDetails.path | quote }}
+                - path: {{print $oidcDetails.path "/*" | quote}}
+              {{-end-}}
+  {{-end-}}
   {{-end-}}
 {{-end-}}

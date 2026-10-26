@@ -1,0 +1,196 @@
+suite: test Networkpolicy allows ingress from keda http addon service
+templates:
+  - templates/_helper.tpl
+  - templates/networkpolicy.yaml
+includeCrds: true
+values:
+  - values.yaml
+release:
+  name: my-release
+  namespace: my-namespace
+  revision: 1
+  upgrade: true
+chart:
+  version: 1.0.0
+  appVersion: 1.0.0
+set: 
+  newtworkPolicy.enabled: true
+tests:
+  - it: should not setup ingress from keda if not enabled
+    set:
+      keda.enabled: false
+      newtworkPolicy.konnectivity.enabled: false
+      http3: true
+    asserts:
+      - isKind:
+          of: NetworkPolicy
+      - isNotNull:
+          path: spec
+      - contains:
+          path: spec.ingress
+          content:
+            from:
+              - podSelector:
+                  matchLabels:
+                    k8s-app: kube-apiserver
+                namespaceSelector:
+                  matchLabels:  
+                    kubernetes.io/metadata.name: kube-system
+            ports:
+              - port: "http"
+                protocol: TCP
+              - port: "http3"
+                protocol: UDP
+          count: 1
+          any: true
+      - notContains:
+          path: spec.ingress
+          content:
+            from:
+              - podSelector:
+                  matchLabels:
+                    k8s-app: konnectivity-agent
+                namespaceSelector:
+                  matchLabels:  
+                    kubernetes.io/metadata.name: kube-system
+          count: 1
+          any: true
+      - notContains:
+          path: spec.ingress
+          content:
+            from:
+              - namespaceSelector:
+                  matchLabels:  
+                    kubernetes.io/metadata.name: keda
+          count: 1
+          any: true
+  - it: should setup ingress from keda if enabled with default selector (http3)
+    set:
+      http3: true
+      keda.enabled: true
+      newtworkPolicy.keda.enabled: true
+      newtworkPolicy.keda.selectors: []
+    asserts:
+      - isKind:
+          of: NetworkPolicy
+      - isSome:
+          path: spec
+      - contains:
+          path: spec.ingress
+          content:
+            from:
+              - namespaceSelector:
+                  matchLabels:  
+                    kubernetes.io/metadata.name: keda
+            ports:
+              - port: "http"
+                protocol: TCP
+              - port: "http3"
+                protocol: UDP
+          count: 1
+          any: false
+  - it: should setup ingress from keda if enabled with default selector (without http3)
+    set:
+      http3: false
+      keda.enabled: true
+      newtworkPolicy.keda.enabled: true
+      newtworkPolicy.keda.selectors: []
+    asserts:
+      - isKind:
+          of: NetworkPolicy
+      - isSome:
+          path: spec
+      - contains:
+          path: spec.ingress
+          content:
+            from:
+              - namespaceSelector:
+                  matchLabels:  
+                    kubernetes.io/metadata.name: keda
+            ports:
+              - port: "http"
+                protocol: TCP
+          count: 1
+          any: false
+  - it: should setup ingress from keda if enabled with custom selector (http3)
+    set:
+      http3: true
+      keda.enabled: true
+      newtworkPolicy.keda.enabled: true
+      newtworkPolicy.keda.selectors:
+        - podSelector:
+            matchExpressions:
+              - key: testing
+                operator: Exists
+          namespaceSelector:
+            matchExpressions:
+              - key: testing2
+                operator: In
+                values:
+                  - test1
+                  - test2
+                  - test3
+        - podSelector:
+            matchExpressions:
+              - key: teq123123
+                operator: Exists
+    asserts:
+      - isKind:
+          of: NetworkPolicy
+      - isSome:
+          path: spec
+      - contains:
+          path: spec.ingress
+          content:
+            from:
+              - podSelector:
+                  matchExpressions:
+                    - key: testing
+                      operator: Exists
+                namespaceSelector:
+                  matchExpressions:
+                    - key: testing2
+                      operator: In
+                      values:
+                        - test1
+                        - test2
+                        - test3
+              - podSelector:
+                  matchExpressions:
+                    - key: teq123123
+                      operator: Exists
+            ports:
+              - port: "http"
+                protocol: TCP
+              - port: "http3"
+                protocol: UDP
+          count: 1
+          any: false
+  - it: should setup ingress from keda if enabled with custom selector (without http3)
+    set:
+      http3: false
+      keda.enabled: true
+      newtworkPolicy.keda.enabled: true
+      newtworkPolicy.keda.selectors:
+        - podSelector:
+            matchLabels:
+              name: whateber
+              test: val
+    asserts:
+      - isKind:
+          of: NetworkPolicy
+      - isSome:
+          path: spec
+      - contains:
+          path: spec.ingress
+          content:
+            from:
+              - podSelector:
+                  matchLabels:
+                    name: whateber
+                    test: val
+            ports:
+              - port: "http"
+                protocol: TCP
+          count: 1
+          any: false

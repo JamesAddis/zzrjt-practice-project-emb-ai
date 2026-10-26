@@ -1,10 +1,19 @@
+
+{{-if .Values.networkPolicy.enabled-}}
 # todo ingress from kube-apiserver
 # todo ingress from gateway
-# todo egress to kube-dns
-# todo egress to AI services
-# todo egress to OTEL services
-# todo egress to OIDC services
-{{-if .Values.networkPolicy.enabled-}}
+{{-$aiDetails:=(dict) -}}
+{{-$otelDetails:=(dict) -}}
+{{-$oidcDetails:=(dict) -}}
+{{- if .Values.networkPolicy.ai.enabled -}}
+{{-$aiDetails:=(fromYaml (include "practice-project.route" .Values.ai.endpoint))-}}
+{{-end-}}
+{{- if and .Values.otel.enabled .Values.networkPolicy.otel.enabled -}}
+{{-$otelDetails=(fromYaml (include "practice-project.route" .Values.otel.endpoint))-}}
+{{-end-}}
+{{- if and .Values.oidc.enabled .Values.networkPolicy.oidc.enabled -}}
+{{-$oidcDetails:=(fromYaml (include "practice-project.route" .Values.oidc.endpoint))-}}
+{{-end-}}
 {{-if .Values.networkPolicy.defaultDeny -}}
 ---
 apiVersion: networking.k8s.io/v1
@@ -50,13 +59,24 @@ spec:
               kubernetes.io/metadata.name: kube-system
         {{-if .Values.networkPolicy.konnectivity.enabled-}}
         # Konnectivity
+        {{-if empty .Values.networkPolicy.konnectivity.selectors-}}
         - podSelector:
             matchLabels:
               k8s-app: konnectivity-agent
           namespaceSelector:
             matchLabels:  
               kubernetes.io/metadata.name: kube-system
+        {{-else-}}
+        {{toYaml .Values.networkPolicy.konnectivity.selectors | nident 8}}
         {{-end-}}   
+        {{-if and .Values.httpRoute.enabled .Values.networkPolicy.httpRoute.enabled .Values.networkPolicy.httpRoute.selectors-}}
+        # HTTPRoute ingress
+        {{toYaml .Values.networkPolicy.httpRoute.selectors | nident 8}}
+        {{-end-}}   
+        {{-if and .Values.udpRoute.enabled .Values.networkPolicy.udpRoute.enabled .Values.networkPolicy.httpRoute.selectors-}}
+        # UDPRoute ingress
+        {{toYaml .Values.networkPolicy.udpRoute.selectors | nident 8}}
+        {{-end-}}
         {{-if and .Values.knative.enabled .Values.networkPolicy.knative.enabled-}}
         # Knative
         {{-if empty .Values.networkPolicy.knative.selectors-}}
@@ -98,6 +118,7 @@ spec:
         {{-end-}}
     {{-end-}}
   egress:
+    {{-if .Values.networkPolicy.dns.enabled-}}
     # Kube DNS
     - to:
         - podSelector:
@@ -105,45 +126,71 @@ spec:
               k8s-app: kube-dns
           namespaceSelector:
             matchLabels:
+              kubernetes.io/metadata.name: kube-system
       ports:
         - protocol: TCP
           port: dns-tcp
         - protocol: UDP
           port: dns-udp
-    {{-if .Values.networkPolicy.oidc.enabled-}}
+    {{-end-}}
+    {{-if $oidcDetails -}}
     # OIDC
     - to:
+        {{-if $oidcDetails.ip-}}
         - ipBlock:
+            cidr: {{$oidcDetails.ip | quote}}
+        {{-end-}}
+        {{-with $.Values.networkPolicy.oidc.selectors-}}
+        {{ toYaml . | nident 8 }}
+        {{-end-}}
       ports:
-        {{-range $oidcPorts-}}
+        {{-range $oidcDetails.ports-}}
         - protocol: TCP
-          port: {{.}}
+          port: {{ . }}
+        {{- if $.Values.oidc.http3-}}
         - protocol: UDP
-          port: {{.}}
+          port: {{ . }}
+        {{-end-}}
         {{-end-}}
     {{-end-}}
-    {{-if .Values.networkPolicy.otel.enabled-}}
+    {{-if $otelDetails -}}
     # OTEL
     - to:
+        {{-if $otelDetails.ip-}}
         - ipBlock:
+            cidr: {{$otelDetails.ip | quote}}
+        {{-end-}}
+        {{-with $.Values.networkPolicy.otel.selectors-}}
+        {{ toYaml . | nident 8 }}
+        {{-end-}}
       ports:
-        {{-range $otelPorts-}}
+        {{-range $otelDetails.ports-}}
         - protocol: TCP
-          port: {{.}}
+          port: {{ . }}
+        {{- if $.Values.otel.http3-}}
         - protocol: UDP
-          port: {{.}}
+          port: {{ . }}
+        {{-end-}}
         {{-end-}}
     {{-end-}}
-    {{-if .Values.networkPolicy.ai.enabled-}}
-    # AI Endpoint
+    {{-if $aiDetails -}}
+    # OTEL
     - to:
+        {{-if $aiDetails.ip-}}
         - ipBlock:
+            cidr: {{ $aiDetails.ip | quote}}
+        {{-end-}}
+        {{-with $.Values.networkPolicy.ai.selectors-}}
+        {{ toYaml . | nident 8 }}
+        {{-end-}}
       ports:
-        {{-range $aiPorts-}}
+        {{-range $aiDetails.ports-}}
         - protocol: TCP
-          port: {{.}}
+          port: {{ . }}
+        {{- if $.Values.ai.http3-}}
         - protocol: UDP
-          port: {{.}}
+          port: {{ . }}
+        {{-end-}}
         {{-end-}}
     {{-end-}}
 {{-end-}}

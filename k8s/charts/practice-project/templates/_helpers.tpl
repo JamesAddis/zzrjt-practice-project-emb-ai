@@ -60,3 +60,41 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{-define "practice-project.route"-}}
+{{-$ipv4Regex=""-}}
+{{-$ipv6Regex=""-}}
+{{-$ipv6PortRegex=""-}}
+{{-$portRegex:="^(?:.+):(\d+)$"-}}
+{{-$urlDetails:=urlParse .-}}
+{{-$hostname:=$urlDetails.host-}}
+{{-ports:=(list 80 443)-}}
+{{-if regexMatch $portRegex $hostname-}}
+{{-  $hostname:= index (split $urlDetails.host ":") 0-}}
+{{-  $ports =(list (index (split $urlDetails.host ":") 1))-}}
+{{-else-}}
+{{-  if has $urlDetails.scheme (list "http" "ws")-}}
+{{-    $ports =(list 80)-}}
+{{-  else-}}
+{{-    if has $urlDetails.scheme (list "https" "wss")-}}
+{{-      $ports =(list 443)-}}
+{{-    end-}}
+{{-  end-}}
+{{-  if (regexMatch $ipv4Regex $hostname)-}}
+type: "ipv4"
+fqdn: {{ $hostname | quote}}
+{{-  else-}}
+{{-    if or (regexMatch $ipv6Regex $hostname) (regexMatch $ipv6BracketRegex $hostname)-}}
+type: "ipv6"
+ip: {{ $hostname | quote}}
+{{-    else-}}
+type: "fqdn"
+fqdn: {{ $hostname | quote}}
+{{-    end-}}
+{{-  end-}}
+ports:
+  {{ toYaml $ports | nident 2}}
+path: {{$urlDetails.path}}
+query: {{$urlDetails.query}}
+fragment: {{$urlDetails.fragment}}
+{{-end-}}

@@ -11,7 +11,7 @@ data:
     ai:
       endpoint: {{ .Values.endpoint | quote }}
       headers:
-        {{toYaml .Values.ai.headers | nident 8 }}
+        {{ toYaml .Values.ai.headers | nident 8 }}
     {{-if .Values.otel.enabled-}}
     otel:  
       enabled: true

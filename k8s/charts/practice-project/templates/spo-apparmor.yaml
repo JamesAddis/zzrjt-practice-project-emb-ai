@@ -1,2 +1,2 @@
-{{-if and .Values.sops.enabled .Values.sops.apparmor.create-}}
+{{-if and .Values.spo.enabled .Values.spo.apparmor.create-}}
 {{-end-}}

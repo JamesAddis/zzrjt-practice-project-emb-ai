@@ -1,147 +1,340 @@
-suite: test OTEL Networkpolicy
+suite: test Networkpolicy allows egress to OIDC
 templates:
-  - otel-networkpolicy.yaml
+  - templates/_helper.tpl
+  - templates/networkpolicy.yaml
+includeCrds: true
+values:
+  - values.yaml
+release:
+  name: my-release
+  namespace: my-namespace
+  revision: 1
+  upgrade: true
+chart:
+  version: 1.0.0
+  appVersion: 1.0.0
+set: 
+  newtworkPolicy.enabled: true
+  newtworkPolicy.oidc.enabled: true
 tests:
-  - it: should setup egress to dns request server with AI fqdn
+  - it: should not setup egress to OIDC if not enabled
     set:
-      globals.cilium.enabled: true
-      ai.endpoint: test.ai.example.internal
+      oidc.endpoint: 10.10.1.2
+      oidc.http3: true
+      newtworkPolicy.oidc.enabled: false
+      networkPolicy.oidc.selectors:
+        - podSelector:
+            matchLabels:
+              test: app
     asserts:
       - isKind:
           of: NetworkPolicy
-      - matchRegex:
-          path: specs
-          pattern: -my-chart$
-      - equal:
-          path: egress[0].rules[*].ports[0].rules.dns[*]
-          value: test.ai.example.internal
-  
-  - it: should setup egress to ai FQDN endpoint
+      - isNotNull:
+          path: spec
+      - notContains:
+          path: spec.egress
+          content:
+            to:
+              - ipBlock:
+                  cidr: 10.10.1.2
+          count: 1
+          any: true
+      - notContains:
+          path: spec.egress
+          content:
+            to:
+              - podSelector:
+                  matchLabels:
+                    test: app
+          count: 1
+          any: true
+      - notContains:
+          path: spec.egress
+          content:
+            to:
+              - ipBlock:
+                  cidr: 10.10.1.2
+              - podSelector:
+                  matchLabels:
+                    test: app
+            ports:
+              - port: 80
+                protocol: TCP
+              - port: 80
+                protocol: UDP
+              - port: 443
+                protocol: TCP
+              - port: 443
+                protocol: UDP
+          count: 1
+          any: true
+  - it: should setup egress to OIDC CIDR without http3 support and no selectors
     set:
-      networkpolicy:
-        otel:
-          enabled: true
-      otel.endpoint: test.ai.example.internal
-    asserts:
-      - isKind:
-          of: mNetworkPolicy
-      - matchRegex:
-          path: specs
-          pattern: -my-chart$
-      - equal:
-          path: egress[0].rules[@_.toFQDNs[*].matchName == "test.ai.example.internal"]
-          value: test.ai.example.internal
-      - equal:
-          path: egress[0].rules[@_.toFQDNs[*].matchName == "test.ai.example.internal"].ports[*].ports
-          value: test.ai.example.internal
-  
-  - it: should setup egress to dns request server with AI fqdn
-    set:
-      globals.cilium.enabled: true
-      ai.endpoint: different.ai.example.lan
+      oidc.endpoint: 10.10.1.2
+      oidc.http3: false
+      networkPolicy.oidc.selectors: []
     asserts:
       - isKind:
           of: NetworkPolicy
-      - matchRegex:
-          path: specs
-          pattern: -my-chart$
-      - equal:
-          path: egress[0].rules[*].ports[0].rules.dns[*]
-          value: nginx:tester
-  - it: should use digest
+      - isNotNull:
+          path: spec
+      - isSome:
+          path: spec.egress
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - ipBlock:
+                  cidr: 10.10.1.2
+            ports:
+              - port: 80
+                protocol: TCP
+              - port: 443
+                protocol: TCP
+          count: 1
+          any: true
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - ipBlock:
+                  cidr: 10.10.1.2
+            ports:
+              - port: 80
+                protocol: TCP
+              - port: 443
+                protocol: TCP
+          count: 1
+          any: false
+  
+  - it: should setup egress to OIDC CIDR with http3 support
     set:
-      image.tag: tester
-      image.digest: sha256:e2fd96aab9f74037ccbf7200f9512b02a999d47331acb8a23aee034a7abc4c3b
+      oidc.endpoint: 10.10.1.2
+      oidc.http3: true
+      networkPolicy.oidc.selectors: []
     asserts:
       - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx@sha256:e2fd96aab9f74037ccbf7200f9512b02a999d47331acb8a23aee034a7abc4c3b
-  - it: should add apparmor profile set to use
+          of: NetworkPolicy
+      - isNotNull:
+          path: spec
+      - isSome:
+          path: spec.egress
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - ipBlock:
+                  cidr: 10.10.1.2
+          count: 1
+          any: true
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - ipBlock:
+                  cidr: 10.10.1.2
+            ports:
+              - port: 80
+                protocol: TCP
+              - port: 80
+                protocol: UDP
+              - port: 443
+                protocol: TCP
+              - port: 443
+                protocol: UDP
+          count: 1
+          any: false
+  - it: should setup egress to OIDC CIDR with http3 support
     set:
-      image.tag: latest
+      oidc.endpoint: http://10.100.255.255
+      oidc.http3: true
+      networkPolicy.oidc.enabled: true
+      networkPolicy.oidc.selectors: []
     asserts:
       - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should add apparmor profile set to create apparmor
+          of: NetworkPolicy
+      - isNotNull:
+          path: spec
+      - isSome:
+          path: spec.egress
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - ipBlock:
+                  cidr: 10.100.255.255
+          count: 1
+          any: true
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - ipBlock:
+                  cidr: 10.100.255.255
+            ports:
+              - port: 80
+                protocol: TCP
+              - port: 80
+                protocol: UDP
+          count: 1
+          any: false
+  
+  - it: should setup egress to OIDC CIDR with http3 support
     set:
-      image.tag: latest
+      oidc.endpoint: https://192.168.100.15
+      oidc.http3: true
+      networkPolicy.oidc.enabled: true
+      networkPolicy.oidc.selectors: []
     asserts:
       - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should add seccomp profile set to use
+          of: NetworkPolicy
+      - isNotNull:
+          path: spec
+      - isSome:
+          path: spec.egress
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - ipBlock:
+                  cidr: 192.168.100.15
+          count: 1
+          any: true
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - ipBlock:
+                  cidr: 192.168.100.15
+            ports:
+              - port: 443
+                protocol: TCP
+              - port: 443
+                protocol: UDP
+          count: 1
+          any: false
+  
+  - it: should setup egress to OIDC CIDR with http3 support
     set:
-      image.tag: latest
+      oidc.endpoint: https://192.168.100.15:6798/prefix
+      oidc.http3: true
+      networkPolicy.oidc.enabled: true
+      networkPolicy.oidc.selectors: []
     asserts:
       - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should add seccomp profile set to create
+          of: NetworkPolicy
+      - isNotNull:
+          path: spec
+      - isSome:
+          path: spec.egress
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - ipBlock:
+                  cidr: 192.168.100.15
+          count: 1
+          any: true
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - ipBlock:
+                  cidr: 192.168.100.15
+            ports:
+              - port: 6798
+                protocol: TCP
+              - port: 6798
+                protocol: UDP
+          count: 1
+          any: false
+  
+  - it: should setup egress to OIDC CIDR with http3 support
     set:
-      image.tag: latest
+      oidc.endpoint: https://192.168.100.15:6798/prefix
+      oidc.http3: true
+      networkPolicy.oidc.enabled: true
+      networkPolicy.oidc.selectors:
+        - podSelector:
+            matchLabels:
+              test: app
     asserts:
       - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should set filesystem as readonly if hardened
+          of: NetworkPolicy
+      - isNotNull:
+          path: spec
+      - isSome:
+          path: spec.egress
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - ipBlock:
+                  cidr: 192.168.100.15
+              - podSelector:
+                  matchLabels:
+                    test: app
+          count: 1
+          any: true
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - ipBlock:
+                  cidr: 192.168.100.15
+              - podSelector:
+                  matchLabels:
+                    test: app
+            ports:
+              - port: 6798
+                protocol: TCP
+              - port: 6798
+                protocol: UDP
+          count: 1
+          any: false
+  - it: should setup egress to OIDC FQDN with http3 support and selectors
     set:
-      image.tag: latest
+      oidc.endpoint: http://tester.test:9444/prefix
+      oidc.http3: true
+      networkPolicy.oidc.enabled: true
+      networkPolicy.oidc.selectors:
+        - podSelector:
+            matchLabels:
+              test: app
+        - namespaceSelector:
+            matchLabels:
+              bacon: tempation
     asserts:
       - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should create empty dirs for for /var/logs, tmp, and /var/lib
-    set:
-      image.tag: latest
-    asserts:
-      - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should create /etc/practice-project as projected volume with read only options
-    set:
-      image.tag: latest
-    asserts:
-      - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
+          of: NetworkPolicy
+      - isNotNull:
+          path: spec
+      - isSome:
+          path: spec.egress
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - podSelector:
+                  matchLabels:
+                    test: app
+          count: 1
+          any: true
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - podSelector:
+                  matchLabels:
+                    test: app
+              - namespaceSelector:
+                  matchLabels:
+                    bacon: tempation
+            ports:
+              - port: 9444
+                protocol: TCP
+              - port: 9444
+                protocol: UDP
+          count: 1
+          any: false
+  

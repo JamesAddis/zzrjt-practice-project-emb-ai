@@ -1,0 +1,124 @@
+{{-if and .Values.cilium.enabled .Values.cilium.hostPolicy.enabled-}}
+{{-$aiDetails:=(dict) -}}
+{{-$otelDetails:=(dict) -}}
+{{-$oidcDetails:=(dict) -}}
+{{- if .Values.cilium.hostPolicy.ai -}}
+{{-$aiDetails:=(fromYaml (include "practice-project.route" .Values.ai.endpoint))-}}
+{{-end-}}
+{{- if and .Values.otel.enabled .Values.cilium.hostPolicy.otel -}}
+{{-$otelDetails=(fromYaml (include "practice-project.route" .Values.otel.endpoint))-}}
+{{-end-}}
+{{- if and .Values.oidc.enabled .Values.cilium.hostPolicy.oidc -}}
+{{-$oidcDetails:=(fromYaml (include "practice-project.route" .Values.oidc.endpoint))-}}
+{{-end-}}
+apiVersion: "cilium.io/v2"
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: {{ print .Chart.namespace "-" (include "practice-project.fullname" .) | quote }}
+  labels:
+    {{- include "practice-project.labels" . | nindent 4 }}
+specs:
+  {{-range $i, $value:= .Values.cilium.hostPolicy.egressSelector-}}
+  {{-if $aiDetails -}}
+  - description: "Host egress to external AI Endpoint (nodeselector: {{$i}})"
+    nodeSelector:
+      {{ toYaml $value | nident 6 }}
+    egress:
+      {{-if $aiDetails.ip-}}
+      - toCIDRs:
+          - {{ $aiDetails.ip| quote}}
+        toPorts:
+          - ports:
+              {{-range $aiDetails.ports-}}
+              - port: {{. | quote}}
+                protocol: TCP
+              {{- if $.Values.ai.http3-}}
+              - port: {{. | quote}}
+                protocol: UDP
+              {{-end-}}
+              {{-end-}}
+      {{-end-}}
+      {{-if and .Values.cilium.hostPolicy.fqdn $aiDetails.fqdn-}}
+      - toFQDNs:
+          - matchName: {{$aiDetails.fqdn | quote}}
+        toPorts:
+          - ports:
+              {{-range $aiDetails.ports-}}
+              - port: {{. | quote}}
+                protocol: TCP
+              {{- if $.Values.ai.http3-}}
+              - port: {{. | quote}}
+                protocol: UDP
+              {{-end-}}
+              {{-end-}}
+      {{-end-}}
+  {{-end-}}
+  {{-if $otelDetails -}}
+  - description: Host egress to external OTEL Endpoint
+    nodeSelector:
+      {{ toYaml $value | nident 6 }}
+    egress:
+      {{-if $otelDetails.ip-}}
+      - toCIDRs:
+          - {{ $otelDetails.ip| quote}}
+        toPorts:
+          - ports:
+              {{-range $otelDetails.ports-}}
+              - port: {{. | quote}}
+                protocol: TCP
+              {{- if $.Values.otel.http3-}}
+              - port: {{. | quote}}
+                protocol: UDP
+              {{-end-}}
+              {{-end-}}
+      {{-end-}}
+      {{-if and .Values.cilium.hostPolicy.fqdn $otelDetails.fqdn-}}
+      - toFQDNs:
+          - matchName: {{$otelDetails.fqdn | quote}}
+        toPorts:
+          - ports:
+              {{-range $otelDetails.ports-}}
+              - port: {{. | quote}}
+                protocol: TCP
+              {{- if $.Values.otel.http3-}}
+              - port: {{. | quote}}
+                protocol: UDP
+              {{-end-}}
+              {{-end-}}
+      {{-end-}}
+  {{-end-}}
+  {{-if .Values.cilium.hostPolicy.oidc -}}
+  - description: Host egress to external OIDC Endpoint
+    nodeSelector:
+      {{ toYaml $value | nident 6 }}
+    egress:
+      {{-if $oidcDetails.ip-}}
+      - toCIDRs:
+          - {{ $oidcDetails.ip| quote}}
+        toPorts:
+          - ports:
+              {{-range $oidcDetails.ports-}}
+              - port: {{. | quote}}
+                protocol: TCP
+              {{- if $.Values.oidc.http3-}}
+              - port: {{. | quote}}
+                protocol: UDP
+              {{-end-}}
+              {{-end-}}
+      {{-end-}}
+      {{-if and .Values.cilium.hostPolicy.fqdn $oidcDetails.fqdn-}}
+      - toFQDNs:
+          - matchName: {{$oidcDetails.fqdn | quote}}
+        toPorts:
+          - ports:
+              {{-range $oidcDetails.ports-}}
+              - port: {{. | quote}}
+                protocol: TCP
+              {{- if $.Values.oidc.http3-}}
+              - port: {{. | quote}}
+                protocol: UDP
+              {{-end-}}
+              {{-end-}}
+      {{-end-}}
+  {{-end-}}
+{{-end-}}

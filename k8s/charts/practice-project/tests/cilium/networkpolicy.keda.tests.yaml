@@ -1,6 +1,24 @@
-suite: test OTEL Networkpolicy
+suite: test Pod firewall CiliumNetworkpolicy includes ingress for knative
 templates:
-  - otel-networkpolicy.yaml
+  - templates/_helper.tpl
+  - templates/ciliumnetworkpolicy.yaml
+includeCrds: true
+values:
+  - values.yaml
+release:
+  name: my-release
+  namespace: my-namespace
+  revision: 1
+  upgrade: true
+chart:
+  version: 1.0.0
+  appVersion: 1.0.0
+set: 
+  http3: true
+  cilium.enabled: true
+  cilium.networkPolicy.enabled: true
+  cilium.httpRoute.enabled: true
+  cilium.networkPolicy.httpRoute.enabled: true
 tests:
   - it: should setup egress to dns request server with AI fqdn
     set:
@@ -8,7 +26,7 @@ tests:
       ai.endpoint: test.ai.example.internal
     asserts:
       - isKind:
-          of: NetworkPolicy
+          of: CiliumNetworkPolicy
       - matchRegex:
           path: specs
           pattern: -my-chart$
@@ -18,13 +36,11 @@ tests:
   
   - it: should setup egress to ai FQDN endpoint
     set:
-      networkpolicy:
-        otel:
-          enabled: true
-      otel.endpoint: test.ai.example.internal
+      globals.cilium.enabled: true
+      ai.endpoint: test.ai.example.internal
     asserts:
       - isKind:
-          of: mNetworkPolicy
+          of: CiliumNetworkPolicy
       - matchRegex:
           path: specs
           pattern: -my-chart$
@@ -41,7 +57,7 @@ tests:
       ai.endpoint: different.ai.example.lan
     asserts:
       - isKind:
-          of: NetworkPolicy
+          of: CiliumNetworkPolicy
       - matchRegex:
           path: specs
           pattern: -my-chart$

@@ -1,147 +1,272 @@
-suite: test OTEL Networkpolicy
+suite: test Networkpolicy allows ingress from HTTPRoute
 templates:
-  - otel-networkpolicy.yaml
+  - templates/_helper.tpl
+  - templates/networkpolicy.yaml
+includeCrds: true
+values:
+  - values.yaml
+release:
+  name: my-release
+  namespace: my-namespace
+  revision: 1
+  upgrade: true
+chart:
+  version: 1.0.0
+  appVersion: 1.0.0
+set: 
+  newtworkPolicy.enabled: true
 tests:
-  - it: should setup egress to dns request server with AI fqdn
+  - it: should not setup ingress from httpRoute if not enabled
     set:
-      globals.cilium.enabled: true
-      ai.endpoint: test.ai.example.internal
+      http3: false
+      httpRoute.enabled: false
+      networkPolicy.httpRoute.enabled: true
+      networkPolicy.httpRoute.selectors:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: envoy-gateway
     asserts:
       - isKind:
           of: NetworkPolicy
-      - matchRegex:
-          path: specs
-          pattern: -my-chart$
-      - equal:
-          path: egress[0].rules[*].ports[0].rules.dns[*]
-          value: test.ai.example.internal
-  
-  - it: should setup egress to ai FQDN endpoint
+      - isNotNull:
+          path: spec
+      - notContains:
+          path: spec.ingress
+          content:
+            from:
+              - namespaceSelector:
+                  matchLabels:
+                    kubernetes.io/metadata.name: envoy-gateway
+          count: 1
+          any: true
+      - notContains:
+          path: spec.ingress
+          content:
+            from:
+              - namespaceSelector:
+                  matchLabels:
+                    kubernetes.io/metadata.name: envoy-gateway
+            ports:
+              - port: "http"
+                protocol: TCP
+          count: 1
+          any: true
+      - notContains:
+          path: spec.ingress
+          content:
+            from:
+              - namespaceSelector:
+                  matchLabels:
+                    kubernetes.io/metadata.name: envoy-gateway
+            ports:
+              - port: "http"
+                protocol: TCP
+              - port: "http3"
+                protocol: UDP
+          count: 1
+          any: true
+  - it: should not setup ingress from httpRoute if not enabled for network policy
     set:
-      networkpolicy:
-        otel:
-          enabled: true
-      otel.endpoint: test.ai.example.internal
-    asserts:
-      - isKind:
-          of: mNetworkPolicy
-      - matchRegex:
-          path: specs
-          pattern: -my-chart$
-      - equal:
-          path: egress[0].rules[@_.toFQDNs[*].matchName == "test.ai.example.internal"]
-          value: test.ai.example.internal
-      - equal:
-          path: egress[0].rules[@_.toFQDNs[*].matchName == "test.ai.example.internal"].ports[*].ports
-          value: test.ai.example.internal
-  
-  - it: should setup egress to dns request server with AI fqdn
-    set:
-      globals.cilium.enabled: true
-      ai.endpoint: different.ai.example.lan
+      http3: true
+      httpRoute.enabled: true
+      networkPolicy.httpRoute.enabled: false
+      networkPolicy.httpRoute.selectors:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: another-one
+          podSelector:
+            matchExpressions:
+              - key: "testing"
+                operator: Exists
     asserts:
       - isKind:
           of: NetworkPolicy
-      - matchRegex:
-          path: specs
-          pattern: -my-chart$
-      - equal:
-          path: egress[0].rules[*].ports[0].rules.dns[*]
-          value: nginx:tester
-  - it: should use digest
+      - isNotNull:
+          path: spec
+      - notContains:
+          path: spec.ingress
+          content:
+            from:
+              - namespaceSelector:
+                  matchLabels:
+                    kubernetes.io/metadata.name: another-one
+                podSelector:
+                  matchExpressions:
+                    - key: "testing"
+                      operator: Exists
+          count: 1
+          any: true
+      - notContains:
+          path: spec.ingress
+          content:
+            from:
+              - namespaceSelector:
+                  matchLabels:
+                    kubernetes.io/metadata.name: another-one
+                podSelector:
+                  matchExpressions:
+                    - key: "testing"
+                      operator: Exists
+            ports:
+              - port: "http"
+                protocol: TCP
+          count: 1
+          any: true
+      - notContains:
+          path: spec.ingress
+          content:
+            from:
+              - namespaceSelector:
+                  matchLabels:
+                    kubernetes.io/metadata.name: another-one
+                podSelector:
+                  matchExpressions:
+                    - key: "testing"
+                      operator: Exists
+            ports:
+              - port: "http"
+                protocol: TCP
+              - port: "http3"
+                protocol: UDP
+          count: 1
+          any: true
+  - it: should setup ingress from httpRoute if enabled with http3
     set:
-      image.tag: tester
-      image.digest: sha256:e2fd96aab9f74037ccbf7200f9512b02a999d47331acb8a23aee034a7abc4c3b
+      http3: true
+      httpRoute.enabled: true
+      networkPolicy.httpRoute.enabled: true
+      networkPolicy.httpRoute.selectors:
+        - namespaceSelector:
+            matchExpressions:
+              - key: "welcome"
+                operator: In
+                values:
+                  - value1
+                  - value2
+          podSelector:
+            matchExpressions:
+              - key: "testing"
+                operator: Exists
     asserts:
       - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx@sha256:e2fd96aab9f74037ccbf7200f9512b02a999d47331acb8a23aee034a7abc4c3b
-  - it: should add apparmor profile set to use
+          of: NetworkPolicy
+      - isSome:
+          path: spec
+      - contains:
+          path: spec.ingress
+          content:
+            from:
+              - namespaceSelector:
+                  matchExpressions:
+                    - key: "welcome"
+                      operator: In
+                      values:
+                        - value1
+                        - value2
+                podSelector:
+                  matchExpressions:
+                    - key: "testing"
+                      operator: Exists
+          count: 1
+          any: true
+      - contains:
+          path: spec.ingress
+          content:
+            from:
+              - namespaceSelector:
+                  matchExpressions:
+                    - key: "welcome"
+                      operator: In
+                      values:
+                        - value1
+                        - value2
+                podSelector:
+                  matchExpressions:
+                    - key: "testing"
+                      operator: Exists
+            ports:
+              - port: "http"
+                protocol: TCP
+          count: 1
+          any: true
+      - contains:
+          path: spec.ingress
+          content:
+            from:
+              - namespaceSelector:
+                  matchExpressions:
+                    - key: "welcome"
+                      operator: In
+                      values:
+                        - value1
+                        - value2
+                podSelector:
+                  matchExpressions:
+                    - key: "testing"
+                      operator: Exists
+            ports:
+              - port: "http"
+                protocol: TCP
+              - port: "http3"
+                protocol: UDP
+          count: 1
+          any: false
+  - it: should setup ingress from httpRoute if enabled without http3
     set:
-      image.tag: latest
+      http3: false
+      httpRoute.enabled: true
+      networkPolicy.httpRoute.enabled: true
+      networkPolicy.httpRoute.selectors:
+        - podSelector:
+            matchLabels:
+              gateway: http
+        - namespaceSelector:
+            matchLabels:
+              testing: testing
     asserts:
       - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should add apparmor profile set to create apparmor
-    set:
-      image.tag: latest
-    asserts:
-      - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should add seccomp profile set to use
-    set:
-      image.tag: latest
-    asserts:
-      - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should add seccomp profile set to create
-    set:
-      image.tag: latest
-    asserts:
-      - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should set filesystem as readonly if hardened
-    set:
-      image.tag: latest
-    asserts:
-      - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should create empty dirs for for /var/logs, tmp, and /var/lib
-    set:
-      image.tag: latest
-    asserts:
-      - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should create /etc/practice-project as projected volume with read only options
-    set:
-      image.tag: latest
-    asserts:
-      - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
+          of: NetworkPolicy
+      - isNotNull:
+          path: spec
+      - notContains:
+          path: spec.ingress
+          content:
+            from:
+              - podSelector:
+                  matchLabels:
+                    gateway: http
+                namespaceSelector:
+                  matchLabels:
+                    testing: testing
+          count: 1
+          any: true
+      - contains:
+          path: spec.ingress
+          content:
+            from:
+              - podSelector:
+                  matchLabels:
+                    gateway: http
+                namespaceSelector:
+                  matchLabels:
+                    testing: testing
+            ports:
+              - port: "http"
+                protocol: TCP
+          count: 1
+          any: true
+      - contains:
+          path: spec.ingress
+          content:
+            from:
+              - podSelector:
+                  matchLabels:
+                    gateway: http
+                namespaceSelector:
+                  matchLabels:
+                    testing: testing
+            ports:
+              - port: "http"
+                protocol: TCP
+          count: 1
+          any: true

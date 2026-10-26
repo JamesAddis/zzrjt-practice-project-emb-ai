@@ -1,0 +1,2 @@
+{{-if and .Values.keda.enabled .Values.keda.authPolicy.create -}}
+{{-end-}}
