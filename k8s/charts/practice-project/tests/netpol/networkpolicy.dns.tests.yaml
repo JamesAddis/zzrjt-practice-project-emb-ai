@@ -58,7 +58,7 @@ tests:
               - protocol: TCP
                 port: dns-tcp
               - protocol: UDP
-                port: dns-udp
+                port: dns
           count: 1
           any: false
   - it: should setup egress to DNS if enabled
@@ -85,6 +85,6 @@ tests:
               - protocol: TCP
                 port: dns-tcp
               - protocol: UDP
-                port: dns-udp
+                port: dns
           count: 1
           any: false

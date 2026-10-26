@@ -92,9 +92,9 @@ specs:
     nodeSelector:
       {{ toYaml $value | nident 6 }}
     egress:
-      {{-if $oidcDetails.ip-}}
+      {{-if $oidcDetails.ip -}}
       - toCIDRs:
-          - {{ $oidcDetails.ip| quote}}
+          - {{ $oidcDetails.ip | quote}}
         toPorts:
           - ports:
               {{-range $oidcDetails.ports-}}

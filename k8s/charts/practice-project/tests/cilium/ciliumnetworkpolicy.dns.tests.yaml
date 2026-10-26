@@ -97,7 +97,7 @@ tests:
               - ports:
                   - port: "dns-tcp"
                     protocol: "TCP"
-                  - port: "dns-udp"
+                  - port: "dns"
                     protocol: "UDP"
                 rules:
                   dns:
@@ -141,7 +141,7 @@ tests:
               - ports:
                   - port: "dns-tcp"
                     protocol: "TCP"
-                  - port: "dns-udp"
+                  - port: "dns"
                     protocol: "UDP"
                 rules:
                   dns:
@@ -184,7 +184,7 @@ tests:
               - ports:
                   - port: "dns-tcp"
                     protocol: "TCP"
-                  - port: "dns-udp"
+                  - port: "dns"
                     protocol: "UDP"
                 rules:
                   dns:
@@ -227,7 +227,7 @@ tests:
               - ports:
                   - port: "dns-tcp"
                     protocol: "TCP"
-                  - port: "dns-udp"
+                  - port: "dns"
                     protocol: "UDP"
                 rules:
                   dns:
@@ -267,7 +267,7 @@ tests:
               - ports:
                   - port: "dns-tcp"
                     protocol: "TCP"
-                  - port: "dns-udp"
+                  - port: "dns"
                     protocol: "UDP"
                 rules:
                   dns:

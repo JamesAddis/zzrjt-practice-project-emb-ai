@@ -62,9 +62,9 @@ Create the name of the service account to use
 {{- end }}
 
 {{-define "practice-project.route"-}}
-{{-$ipv4Regex=""-}}
-{{-$ipv6Regex=""-}}
-{{-$ipv6PortRegex=""-}}
+{{-$ipv4Regex="(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"-}}
+{{-$ipv6Regex="^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:))$"-}}
+{{-$ipv6BracketedRegex="^\[(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:))\]$"-}}
 {{-$portRegex:="^(?:.+):(\d+)$"-}}
 {{-$urlDetails:=urlParse .-}}
 {{-$hostname:=$urlDetails.host-}}
@@ -82,13 +82,16 @@ Create the name of the service account to use
 {{-  end-}}
 {{-  if (regexMatch $ipv4Regex $hostname)-}}
 type: "ipv4"
-fqdn: {{ $hostname | quote}}
+ip: {{ $hostname | quote}}
+fqdn: ""
 {{-  else-}}
-{{-    if or (regexMatch $ipv6Regex $hostname) (regexMatch $ipv6BracketRegex $hostname)-}}
+{{-    if or (regexMatch $ipv6Regex $hostname) (regexMatch $ipv6BracketedRegex $hostname)-}}
 type: "ipv6"
 ip: {{ $hostname | quote}}
+fqdn: ""
 {{-    else-}}
 type: "fqdn"
+ip: ""
 fqdn: {{ $hostname | quote}}
 {{-    end-}}
 {{-  end-}}
@@ -97,4 +100,43 @@ ports:
 path: {{$urlDetails.path}}
 query: {{$urlDetails.query}}
 fragment: {{$urlDetails.fragment}}
+{{-end-}}
+
+{{-define "practice-project.netpol.svcLookup"-}}
+{{-$hostname:=index . 0-}}
+{{-$values:=index . 1-}}
+{{-$clusterDomain:=(default "cluster.local" $values.global.clusterDomain)-}}
+{{-$regexShort:="^([a-zA-z0-9\-\_])+$"-}}
+{{-$regexNamespaced:="^([a-zA-z0-9\-\_])+\.([a-zA-z0-9\-\_])+$"-}}
+{{-$regexFull:=(print "^([a-zA-z0-9\-\_])+\.([a-zA-z0-9\-\_])+\.svc\." $clusterDomain "$")-}}
+{{-if regexMatch $regexShort $hostname-}}
+{{-$details:=lookup "v1" "Service" $values.Release.Namespace (index (split $url ".") 0) }}
+{{-if and (eq $details.type "ClusterIP") $details.clusterIP -}}
+- ipBlock:
+    cidr: {{$details.clusterIP | quote }}
+{{-end-}}
+- podSelector:
+    matchLabel:
+    {{ toYaml $details.spec.selector | nident 4 }}
+{{-else-}}
+{{-  if or (regexMatch $regexNamespaced $hostname) (regexMatch $regexFull $hostname)-}}
+{{-$details:=lookup "v1" "Service"  (index (split $url ".") 1) (index (split $url ".") 0) }}
+{{-if and $values.networkPolicy.useClusterIPForFqdn (eq $details.type "ClusterIP") $details.clusterIP -}}
+- ipBlock:
+    cidr: {{$details.clusterIP | quote }}
+{{-end-}}
+- podSelector:
+    matchLabel:
+      {{ toYaml $details.spec.selector | nident 4 }}
+  namespaceSelector:
+    matchLabel:
+      kubernetes.io/metadata.name: {{(index (split $url ".") 1) | quote}}
+{{-else-}}
+{{-if  $values.networkPolicy.useDnsForFqdn -}}
+{{- with (getHostByName $url)-}}
+- ipBlock:
+    cidr: {{ . | quote}}
+{{- end-}}
+{{- end-}}
+{{-end-}}
 {{-end-}}

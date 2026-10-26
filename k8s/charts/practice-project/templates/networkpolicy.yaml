@@ -129,14 +129,19 @@ spec:
         - protocol: TCP
           port: dns-tcp
         - protocol: UDP
-          port: dns-udp
+          port: dns
     {{-end-}}
     {{-if $oidcDetails -}}
     # OIDC
     - to:
         {{-if $oidcDetails.ip-}}
         - ipBlock:
-            cidr: {{$oidcDetails.ip | quote}}
+            cidr: {{ $oidcDetails.ip | quote}}
+        {{-end-}}
+        {{-if $oidcDetails.fqdn-}}
+        {{- with (fromYaml (include "practice-project.netpol.svcLookup" $oidcDetails.fqdn $.))-}}
+        {{ toYaml . | nident 8 }}
+        {{- end-}}
         {{-end-}}
         {{-with $.Values.networkPolicy.oidc.selectors-}}
         {{ toYaml . | nident 8 }}
@@ -156,7 +161,12 @@ spec:
     - to:
         {{-if $otelDetails.ip-}}
         - ipBlock:
-            cidr: {{$otelDetails.ip | quote}}
+            cidr: {{ $otelDetails.ip | quote}}
+        {{-end-}}
+        {{-if $otelDetails.fqdn-}}
+        {{- with (fromYaml (include "practice-project.netpol.svcLookup" $otelDetails.fqdn $.))-}}
+        {{ toYaml . | nident 8 }}
+        {{- end-}}
         {{-end-}}
         {{-with $.Values.networkPolicy.otel.selectors-}}
         {{ toYaml . | nident 8 }}
@@ -177,6 +187,11 @@ spec:
         {{-if $aiDetails.ip-}}
         - ipBlock:
             cidr: {{ $aiDetails.ip | quote}}
+        {{-end-}}
+        {{-if $aiDetails.fqdn-}}
+        {{- with (fromYaml (include "practice-project.netpol.svcLookup" $aiDetails.fqdn $.))-}}
+        {{ toYaml . | nident 8 }}
+        {{- end-}}
         {{-end-}}
         {{-with $.Values.networkPolicy.ai.selectors-}}
         {{ toYaml . | nident 8 }}

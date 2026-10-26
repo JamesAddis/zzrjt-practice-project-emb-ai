@@ -13,16 +13,18 @@ release:
 chart:
   version: 1.0.0
   appVersion: 1.0.0
-set: 
+set:
+  otel.enabled: true
+  oidc.enabled: false
   cilium.enabled: true
   cilium.networkPolicy.enabled: true
-  cilium.httpRoute.enabled: true
-  oidc.enabled: true
-  cilium.networkPolicy.oidc.enabled: true
+  cilium.networkPolicy.ai: false
+  cilium.networkPolicy.otel: true
+  cilium.networkPolicy.oidc: false
 tests:
-  - it: should setup egress to oidc FQDN endpoint 
+  - it: should setup egress to otel FQDN endpoint 
     set:
-      oidc.endpoint: test.oidc.lan
+      otel.endpoint: test.otel.lan
     asserts:
       - isKind:
           of: CiliumNetworkPolicy
@@ -34,14 +36,14 @@ tests:
           path: specs[*].egress
           content:
             toFQDNs:
-              - matchName: "test.oidc.lan"
+              - matchName: "test.otel.lan"
           count: 1
           any: true
       - contains:
           path: specs[*].egress
           content:
             toFQDNs:
-              - matchName: "test.oidc.lan"
+              - matchName: "test.otel.lan"
             toPorts:
               - ports:
                   - port: "80"
@@ -56,15 +58,15 @@ tests:
                   - port: "443"
                     protocol: "UDP"
                 serverNames:
-                  - "test.oidc.lan"
+                  - "test.otel.lan"
                 rules:
                   http: [{}]
           count: 1
           any: false
 
-  - it: should setup egress to oidc FQDN endpoint with prefix
+  - it: should setup egress to otel FQDN endpoint with prefix
     set:
-      oidc.endpoint: test.oidc.lan/openoidc
+      otel.endpoint: test.otel.lan/openotel
     asserts:
       - isKind:
           of: CiliumNetworkPolicy
@@ -76,14 +78,14 @@ tests:
           path: specs[*].egress
           content:
             toFQDNs:
-              - matchName: "test.oidc.lan"
+              - matchName: "test.otel.lan"
           count: 1
           any: true
       - contains:
           path: specs[*].egress
           content:
             toFQDNs:
-              - matchName: "test.oidc.lan"
+              - matchName: "test.otel.lan"
             toPorts:
               - ports:
                   - port: "80"
@@ -92,25 +94,25 @@ tests:
                     protocol: "UDP"
                 rules:
                   http:
-                    - path: /openoidc
-                    - path: /openoidc/*
+                    - path: /openotel
+                    - path: /openotel/*
               - ports:
                   - port: "443"
                     protocol: "TCP"
                   - port: "443"
                     protocol: "UDP"
                 serverNames:
-                  - "test.oidc.lan"
+                  - "test.otel.lan"
                 rules:
                   http:
-                    - path: /openoidc
-                    - path: /openoidc/*
+                    - path: /openotel
+                    - path: /openotel/*
           count: 1
           any: false
 
-  - it: should setup egress to oidc http FQDN endpoint 
+  - it: should setup egress to otel http FQDN endpoint 
     set:
-      oidc.endpoint: http://test.oidc.example.internal
+      otel.endpoint: http://test.otel.example.internal
     asserts:
       - isKind:
           of: CiliumNetworkPolicy
@@ -122,14 +124,14 @@ tests:
           path: specs[*].egress
           content:
             toFQDNs:
-              - matchName: "test.oidc.example.internal"
+              - matchName: "test.otel.example.internal"
           count: 1
           any: true
       - contains:
           path: specs[*].egress
           content:
             toFQDNs:
-              - matchName: "test.oidc.example.internal"
+              - matchName: "test.otel.example.internal"
             toPorts:
               - ports:
                   - port: "80"
@@ -141,9 +143,9 @@ tests:
           count: 1
           any: false
   
-  - it: should setup egress to oidc https FQDN endpoint
+  - it: should setup egress to otel https FQDN endpoint
     set:
-      oidc.endpoint: https://different.test.example.com
+      otel.endpoint: https://different.test.example.com
     asserts:
       - isKind:
           of: CiliumNetworkPolicy
@@ -176,9 +178,10 @@ tests:
           count: 1
           any: false
   
-  - it: should setup egress to oidc with custom port FQDN endpoint (test.oidc.example.internal)
+  - it: should setup egress to otel with custom port FQDN endpoint (test.otel.example.internal)
     set:
-      oidc.endpoint: extra-fine.lan:6666
+      otel.http3: true
+      otel.endpoint: extra-fine.lan:6666
     asserts:
       - isKind:
           of: CiliumNetworkPolicy
@@ -209,9 +212,10 @@ tests:
           count: 1
           any: false
   
-  - it: should setup egress to oidc with https custom port FQDN endpoint (test.oidc.example.internal)
+  - it: should setup egress to otel with https custom port FQDN endpoint (test.otel.example.internal)
     set:
-      oidc.endpoint: https://completely-different.lan:5053
+      otel.http3: true
+      otel.endpoint: https://completely-different.lan:5053
     asserts:
       - isKind:
           of: CiliumNetworkPolicy
@@ -244,9 +248,10 @@ tests:
           count: 1
           any: false
 
-  - it: should setup egress to oidc CIDR endpoint
+  - it: should setup egress to otel CIDR endpoint
     set:
-      oidc.endpoint: 10.2.2.50
+      otel.http3: true
+      otel.endpoint: 10.2.2.50
     asserts:
       - isKind:
           of: CiliumNetworkPolicy
@@ -281,9 +286,10 @@ tests:
           count: 1
           any: false
   
-  - it: should setup egress to oidc CIDR endpoint with custom prefix
+  - it: should setup egress to otel CIDR endpoint with custom prefix
     set:
-      oidc.endpoint: 10.2.2.50/prefix234
+      otel.http3: true
+      otel.endpoint: 10.2.2.50/prefix234
     asserts:
       - isKind:
           of: CiliumNetworkPolicy
@@ -320,9 +326,46 @@ tests:
           count: 1
           any: false
   
-  - it: should setup egress to oidc http CIDR endpoint
+  - it: should setup egress to otel CIDR endpoint with custom prefix (without http3)
     set:
-      oidc.endpoint: http://172.16.20.20
+      otel.http3: false
+      otel.endpoint: 10.2.2.50/prefix234
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "10.2.2.50"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "10.2.2.50"
+            toPorts:
+              - ports:
+                  - port: "80"
+                    protocol: "TCP"
+                  - port: "443"
+                    protocol: "TCP"
+                rules:
+                  http:
+                    - path: /prefix234
+                    - path: /prefix234/*
+          count: 1
+          any: false
+  
+  - it: should setup egress to otel http CIDR endpoint
+    set:
+      otel.http3: true
+      otel.endpoint: http://172.16.20.20
     asserts:
       - isKind:
           of: CiliumNetworkPolicy
@@ -352,10 +395,41 @@ tests:
                   http: [{}]
           count: 1
           any: false
-  
-  - it: should setup egress to oidc https CIDR endpoint
+  - it: should setup egress to otel http CIDR endpoint (without http3)
     set:
-      oidc.endpoint: https://172.16.20.20
+      otel.http3: false
+      otel.endpoint: http://172.16.20.20
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs[*].egress
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "172.16.20.20"
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].egress
+          content:
+            toCIDRs:
+              - "172.16.20.20"
+            toPorts:
+              - ports:
+                  - port: "80"
+                    protocol: "TCP"
+                rules:
+                  http: [{}]
+          count: 1
+          any: false
+  
+  - it: should setup egress to otel https CIDR endpoint
+    set:
+      otel.endpoint: https://172.16.20.20
     asserts:
       - isKind:
           of: CiliumNetworkPolicy
@@ -386,9 +460,9 @@ tests:
           count: 1
           any: false
   
-  - it: should setup egress to oidc with custom port CIDR endpoint
+  - it: should setup egress to otel with custom port CIDR endpoint
     set:
-      oidc.endpoint: 192.168.100.42:4545
+      otel.endpoint: 192.168.100.42:4545
     asserts:
       - isKind:
           of: CiliumNetworkPolicy
@@ -419,9 +493,9 @@ tests:
           count: 1
           any: false
   
-  - it: should setup egress to oidc with http custom port CIDR endpoint (test.oidc.example.internal)
+  - it: should setup egress to otel with http custom port CIDR endpoint (test.otel.example.internal)
     set:
-      oidc.endpoint: http://10.250.23.23:6666
+      otel.endpoint: http://10.250.23.23:6666
     asserts:
       - isKind:
           of: CiliumNetworkPolicy
@@ -452,9 +526,9 @@ tests:
           count: 1
           any: false
   
-  - it: should setup egress to oidc with https custom port FQDN endpoint
+  - it: should setup egress to otel with https custom port FQDN endpoint
     set:
-      oidc.endpoint: https://10.100.1.1:5053
+      otel.endpoint: https://10.100.1.1:5053
     asserts:
       - isKind:
           of: CiliumNetworkPolicy

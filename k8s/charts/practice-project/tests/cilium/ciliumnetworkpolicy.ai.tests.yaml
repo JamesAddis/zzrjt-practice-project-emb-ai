@@ -14,9 +14,13 @@ chart:
   version: 1.0.0
   appVersion: 1.0.0
 set: 
+  otel.enabled: false
+  oidc.enabled: false
   cilium.enabled: true
   cilium.networkPolicy.enabled: true
   cilium.networkPolicy.ai: true
+  cilium.networkPolicy.otel: false
+  cilium.networkPolicy.oidc: false
 tests:
   - it: should setup egress to ai FQDN endpoint 
     set:

@@ -140,7 +140,7 @@ specs:
           - ports:
               - port: "dns"
                 protocol: TCP
-              - port: "dns-udp"
+              - port: "dns"
                 protocol: UDP
             rules:
               dns:
