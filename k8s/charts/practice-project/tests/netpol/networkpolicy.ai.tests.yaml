@@ -1,3 +1,4 @@
+# TODO decide if I should do service externalname lookup
 suite: test Networkpolicy allows egress to AI
 templates:
   - templates/_helper.tpl
@@ -14,14 +15,79 @@ chart:
   version: 1.0.0
   appVersion: 1.0.0
 set: 
-  newtworkPolicy.enabled: true
-  newtworkPolicy.ai.enabled: true
+  networkPolicy.enabled: true
+  networkPolicy.ai.enabled: true
+kubernetesProvider:
+  schema:
+    "v1/service":
+      gvr:
+        version:  "v1"
+        resource: "services"
+      namespaced: true
+  objects:
+    - kind: Service
+      apiVersion: v1
+      metadata:
+        name: test
+        namespace: example
+      spec:
+        selector:
+          app.kubernetes.io/name: special-pods
+        ports:
+          - name: http
+            protocol: TCP
+            port: 80
+            targetPort: 1234
+    - kind: Service
+      apiVersion: v1
+      metadata:
+        name: another
+        namespace: space
+      spec:
+        selector:
+          exalted: pork
+        ports:
+          - name: http
+            protocol: TCP
+            port: 80
+            targetPort: 9376
+          - name: http3
+            protocol: UDP
+            port: 80
+            targetPort: 9376
+          - name: https3
+            protocol: UDP
+            port: 443
+            targetPort: 9377
+          - name: https
+            protocol: TCP
+            port: 443
+            targetPort: 9377
+    - kind: Service
+      apiVersion: v1
+      metadata:
+        name: local
+        namespace: my-namespace
+      spec:
+        selector:
+          final: destination
+          regular: testing
+        ports:
+          - name: http
+            protocol: TCP
+            port: 80
+            targetPort: 4444
+          - name: https
+            protocol: TCP
+            port: 443
+            targetPort: 4445
+      
 tests:
   - it: should not setup egress to AI if not enabled
     set:
       ai.endpoint: 10.10.1.2
       ai.http3: true
-      newtworkPolicy.ai.enabled: false
+      networkPolicy.ai.enabled: false
       networkPolicy.ai.selectors:
         - podSelector:
             matchLabels:
@@ -335,6 +401,174 @@ tests:
                 protocol: TCP
               - port: 9444
                 protocol: UDP
+          count: 1
+          any: false
+  
+  - it: should setup egress to AI FQDN (matches full svc domain) with http3 support
+    set:
+      ai.endpoint: test.example.svc.cluster.local
+      ai.http3: true
+      networkPolicy.ai.selectors: []
+      global:
+        clusterDomain: "cluster.local"
+    asserts:
+      - isKind:
+          of: NetworkPolicy
+      - isNotNull:
+          path: spec
+      - isSome:
+          path: spec.egress
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - podSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: special-pods
+                namespaceSelector:
+                  matchLabels:  
+                    kubernetes.io/metadata.name: example
+          count: 1
+          any: true
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - podSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: special-pods
+                namespaceSelector:
+                  matchLabels:  
+                    kubernetes.io/metadata.name: example
+            ports:
+              - port: 80
+                protocol: TCP
+              - port: 80
+                protocol: UDP
+              - port: 443
+                protocol: TCP
+              - port: 443
+                protocol: UDP
+          count: 1
+          any: false
+  - it: should setup egress to AI FQDN (matches shorthand svc) with http3 support
+    set:
+      ai.endpoint: https://another.space
+      ai.http3: true
+      networkPolicy.ai.selectors: []
+      global:
+        clusterDomain: "cluster.local"
+    asserts:
+      - isKind:
+          of: NetworkPolicy
+      - isNotNull:
+          path: spec
+      - isSome:
+          path: spec.egress
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - podSelector:
+                  matchLabels:
+                    exalted: pork
+                namespaceSelector:
+                  matchLabels:  
+                    kubernetes.io/metadata.name: space
+          count: 1
+          any: true
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - podSelector:
+                  matchLabels:
+                    exalted: pork
+                namespaceSelector:
+                  matchLabels:  
+                    kubernetes.io/metadata.name: space
+            ports:
+              - port: 443
+                protocol: TCP
+              - port: 443
+                protocol: UDP
+          count: 1
+          any: false
+  - it: should setup egress to AI FQDN (matches local namespace shorthand svc) with http3 support
+    set:
+      ai.endpoint: https://local
+      ai.http3: true
+      networkPolicy.ai.selectors: []
+      global:
+        clusterDomain: "cluster.local"
+    asserts:
+      - isKind:
+          of: NetworkPolicy
+      - isNotNull:
+          path: spec
+      - isSome:
+          path: spec.egress
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - podSelector:
+                  matchLabels:
+                    final: destination
+                    regular: testing
+          count: 1
+          any: true
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - podSelector:
+                  matchLabels:
+                    final: destination
+                    regular: testing
+            ports:
+              - port: 443
+                protocol: TCP
+              - port: 443
+                protocol: UDP
+          count: 1
+          any: false
+  
+  - it: should setup egress to AI FQDN (matches svc regex) without http3 support
+    set:
+      ai.endpoint: https://local.my-namespace.svc.another-domain-entirely.internal:3412/bother/bother
+      ai.http3: false
+      networkPolicy.ai.selectors: []
+      global:
+        clusterDomain: "another-domain-entirely.internal"
+    asserts:
+      - isKind:
+          of: NetworkPolicy
+      - isNotNull:
+          path: spec
+      - isSome:
+          path: spec.egress
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - podSelector:
+                  matchLabels:
+                    final: destination
+                    regular: testing
+          count: 1
+          any: true
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - podSelector:
+                  matchLabels:
+                    final: destination
+                    regular: testing
+            ports:
+              - port: 3412
+                protocol: TCP
           count: 1
           any: false
   

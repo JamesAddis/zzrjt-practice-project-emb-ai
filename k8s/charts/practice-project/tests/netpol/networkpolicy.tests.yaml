@@ -14,12 +14,12 @@ chart:
   version: 1.0.0
   appVersion: 1.0.0
 set: 
-  newtworkPolicy.enabled: true
-  newtworkPolicy.otel.enabled: true
+  networkPolicy.enabled: true
+  networkPolicy.otel.enabled: true
 tests:
   - it: should not setup network policy if not enabled
     set:
-      newtworkPolicy.enabled: false
+      networkPolicy.enabled: false
     asserts:
       - isKind:
           of: NetworkPolicy
@@ -27,7 +27,7 @@ tests:
           path: spec
   - it: should setup network policy if enabled
     set:
-      newtworkPolicy.enabled: false
+      networkPolicy.enabled: false
     asserts:
       - isKind:
           of: NetworkPolicy
@@ -35,7 +35,7 @@ tests:
           path: spec
   - it: should setup 2 network policies if default deny enabled
     set:
-      newtworkPolicy.enabled: false
+      networkPolicy.enabled: false
     asserts:
       - isKind:
           of: NetworkPolicy

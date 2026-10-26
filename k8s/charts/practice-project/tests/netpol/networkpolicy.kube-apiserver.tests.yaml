@@ -14,12 +14,12 @@ chart:
   version: 1.0.0
   appVersion: 1.0.0
 set: 
-  newtworkPolicy.enabled: true
-  newtworkPolicy.konnectivity.enabled: true
+  networkPolicy.enabled: true
+  networkPolicy.konnectivity.enabled: true
 tests:
   - it: should not setup ingress from konnectivity if not enabled
     set:
-      newtworkPolicy.konnectivity.enabled: false
+      networkPolicy.konnectivity.enabled: false
       http3: true
     asserts:
       - isKind:
@@ -75,7 +75,7 @@ tests:
           any: true
   - it: should setup ingress from konnectivity if enabled
     set:
-      newtworkPolicy.konnectivity.enabled: true
+      networkPolicy.konnectivity.enabled: true
       http3: true
     asserts:
       - isKind:
@@ -107,7 +107,7 @@ tests:
           any: true
   - it: should setup ingress from konnectivity if enabled and http3 not enabled
     set:
-      newtworkPolicy.konnectivity.enabled: true
+      networkPolicy.konnectivity.enabled: true
       http3: false
     asserts:
       - isKind:

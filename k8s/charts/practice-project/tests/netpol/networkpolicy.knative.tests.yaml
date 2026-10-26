@@ -14,12 +14,12 @@ chart:
   version: 1.0.0
   appVersion: 1.0.0
 set: 
-  newtworkPolicy.enabled: true
+  networkPolicy.enabled: true
 tests:
   - it: should not setup ingress from knative if not enabled
     set:
       knative.enabled: false
-      newtworkPolicy.konnectivity.enabled: false
+      networkPolicy.konnectivity.enabled: false
       http3: true
     asserts:
       - isKind:
@@ -68,8 +68,8 @@ tests:
     set:
       http3: true
       knative.enabled: true
-      newtworkPolicy.knative.enabled: true
-      newtworkPolicy.knative.selectors: []
+      networkPolicy.knative.enabled: true
+      networkPolicy.knative.selectors: []
     asserts:
       - isKind:
           of: NetworkPolicy
@@ -93,8 +93,8 @@ tests:
     set:
       http3: false
       knative.enabled: true
-      newtworkPolicy.knative.enabled: true
-      newtworkPolicy.knative.selectors: []
+      networkPolicy.knative.enabled: true
+      networkPolicy.knative.selectors: []
     asserts:
       - isKind:
           of: NetworkPolicy
@@ -116,8 +116,8 @@ tests:
     set:
       http3: true
       knative.enabled: true
-      newtworkPolicy.knative.enabled: true
-      newtworkPolicy.knative.selectors:
+      networkPolicy.knative.enabled: true
+      networkPolicy.knative.selectors:
         - podSelector:
             matchExpressions:
               - key: testing
@@ -170,8 +170,8 @@ tests:
     set:
       http3: false
       knative.enabled: true
-      newtworkPolicy.knative.enabled: true
-      newtworkPolicy.knative.selectors:
+      networkPolicy.knative.enabled: true
+      networkPolicy.knative.selectors:
         - podSelector:
             matchLabels:
               name: whateber

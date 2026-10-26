@@ -14,7 +14,7 @@ chart:
   version: 1.0.0
   appVersion: 1.0.0
 set: 
-  newtworkPolicy.enabled: true
+  networkPolicy.enabled: true
 tests:
   - it: should not setup ingress from httpRoute if not enabled
     set:

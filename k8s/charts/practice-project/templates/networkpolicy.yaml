@@ -24,9 +24,7 @@ metadata:
     {{- include "practice-project.labels" . | nindent 4 }}
 spec:
   description: Default Deny for Practice Project
-  podSelector:
-    - matchLabels:
-        {{- include "practice-project.labels" . | nindent 8 }}
+  podSelector: {}
   policyTypes:
     - Ingress
     - Egress
@@ -87,7 +85,7 @@ spec:
         {{ toYaml .Values.networkPolicy.knative.selectors | nident 8}}
         {{-end-}}
         {{-end-}}
-        {{-if .Values.networkPolicy.ingress.selectors-}}
+        {{-if .Values.networkPolicy.knative.selectors-}}
         {{ toYaml .Values.networkPolicy.knative.selectors | nident 8}}
         {{-end-}}
       ports:
