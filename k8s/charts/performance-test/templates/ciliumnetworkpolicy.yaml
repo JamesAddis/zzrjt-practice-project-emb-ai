@@ -1,0 +1,219 @@
+{{-if and .Values.cilium.enabled .Values.cilium.networkPolicy.enabled-}}
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: {{ include "practice-project.fullname" . }}
+  labels:
+    {{- include "practice-project.labels" . | nindent 4 }}
+specs:
+  - description: Allow Pod ingress access for Health checks
+    endpointSelector:
+      matchLabels:
+        {{- include "performance-test.masterLabels" . | nindent 8 }}
+    ingress:
+      - fromEntities:
+          - health
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "5557"
+                protocol: TCP
+              - port: "5558"
+                protocol: TCP
+              - port: "8089"
+                protocol: TCP
+              - port: "8089"
+                protocol: TCP
+      - fromEndpoints:
+          - matchLabels:
+              k8s:io.kubernetes.pod.namespace: kube-system
+              k8s-app: konnectivity-agent
+        toPorts:
+          - ports:
+              - port: "5557"
+                protocol: TCP
+              - port: "5558"
+                protocol: TCP
+              - port: "8089"
+                protocol: TCP
+              - port: "8089"
+                protocol: TCP
+  - description: Allow Master take to workers
+    endpointSelector:
+      matchLabels:
+        {{- include "performance-test.masterLabels" . | nindent 8 }}
+    egress:
+      - toEndpoints:
+          matchLabels:
+            {{- include "performance-test.workerLabels" . | nindent 12 }}
+        toPorts:
+          - ports:
+              - port: "port"
+                protocol: TCP
+              - port: "bind"
+                protocol: TCP
+  - description: Allow Master take to workers
+    endpointSelector:
+      matchLabels:
+        {{- include "performance-test.workerLabels" . | nindent 8 }}
+    egress:
+      - toEndpoints:
+          matchLabels:
+            {{- include "performance-test.masterLabels" . | nindent 12 }}
+        toPorts:
+          - ports:
+              - port: "port"
+                protocol: TCP
+              - port: "bind"
+                protocol: TCP
+  {{-if and .Values.cilium.webUi.enabled .Values.cilium.webUi.selectors -}}
+  - description: Allow to Master WebUI ingress
+    endpointSelector:
+      matchLabels:
+        {{- include "performance-test.masterLabels" . | nindent 8 }}
+    ingress:
+      {{-range .Values.cilium.webUi.selectors-}}
+       - toPorts:
+          - ports:
+              - port: "8089"
+                protocol: TCP
+            rules:
+              http: [{}]
+          {{toYaml . | nindent 10 }}
+      {{-end-}}
+  {{-end-}}
+  {{-if and .Values.cilium.networkPolicy.dns.enabled -}}
+  - description: Allow Pod egress to Kube-DNS for DNS requests
+    endpointSelector:
+      matchLabels:
+        {{- include "performance-test.labels" . | nindent 8 }}
+    egress:
+      - toEndpoints:
+          - matchLabels:
+              k8s:io.kubernetes.pod.namespace: kube-system
+              k8s-app: kube-dns
+        toPorts:
+          - ports:
+              - port: "dns-tcp"
+                protocol: TCP
+              - port: "dns"
+                protocol: UDP
+            rules:
+              dns:
+                {{-with $details.fqdn -}}
+                - matchName: {{ . | quote}}
+                {{-end-}}
+                {{-range .Values.cilium.networkPolicy.dns.patterns -}}
+                - matchPattern: {{ . | quote}}
+                {{-end-}}
+                - matchPattern: {{print "*.pod."  .Chart.Namespace | quote }}
+                - matchPattern: {{print "*." .Chart.Namespace| quote }}
+                - matchPattern: {{print "*." .Chart.Namespace| quote }}
+                - matchPattern: {{print "*." .Chart.Namespace ".svc" | quote}}
+                - matchPattern: {{print "*." .Chart.Namespace ".svc." (default "cluster.local" .Values.global.clusterDomain) | quote}}
+  {{-end-}}
+  {{-if .Values.cilium.networkPolicy.website -}}
+  {{-$details:=(fromYaml (include "performance-test.route" .Values.websiteUrl .))-}}
+  - description: Allow Master/Workers egress to Test Website/Webapp
+    endpointSelector:
+      matchLabels:
+        {{- include "performance-test.labels" . | nindent 8 }}
+    egress:
+      {{-if $details.ip-}}
+      - toCIDRs:
+          - {{ $details.ip| quote}}
+        toPorts:
+          - ports:
+              {{-range $details.ports-}}
+              - port: {{. | quote}}
+                protocol: TCP
+              {{- if $.Values.http3-}}
+              - port: {{. | quote}}
+                protocol: UDP
+              {{-end-}}
+              {{-end-}}
+            rules:
+              http:
+              {{-if or (empty $details.path) (eq $details.path "/") -}}
+                - {}
+              {{-else-}}
+                - path: {{$details.path}}
+              {{-end-}}
+      {{-end-}}
+      {{-if $details.fqdn-}}
+      - toFQDNs:
+          - matchName: {{$details.fqdn | quote}}
+        toPorts:
+          - ports:
+              {{-range $details.ports-}}
+              - port: {{. | quote}}
+                protocol: TCP
+              {{- if $.Values.http3-}}
+              - port: {{. | quote}}
+                protocol: UDP
+              {{-end-}}
+              {{-end-}}
+            serverNames:
+              - {{ $details.fqdn | quote}}
+            rules:
+              http:
+              {{-if or (empty $details.path) (eq $details.path "/") -}}
+                - {}
+              {{-else-}}
+                - path: {{$details.path}}
+              {{-end-}}
+      {{-end-}}
+  {{-end-}}
+  {{-if .Values.cilium.networkPolicy.restApi -}}
+  {{-$apiDetails:=(fromYaml (include "performance-test.route" .Values.apiUrl .))-}}
+  - description: Allow Master/Workers egress to Test REST API
+    endpointSelector:
+      matchLabels:
+        {{- include "performance-test.labels" . | nindent 8 }}
+    egress:
+      {{-if $apiDetails.ip-}}
+      - toCIDRs:
+          - {{ $apiDetails.ip| quote}}
+        toPorts:
+          - ports:
+              {{-range $apiDetails.ports-}}
+              - port: {{. | quote}}
+                protocol: TCP
+              {{- if $.Values.http3-}}
+              - port: {{. | quote}}
+                protocol: UDP
+              {{-end-}}
+              {{-end-}}
+            rules:
+              http:
+              {{-if or (empty $apiDetails.path) (eq $apiDetails.path "/") -}}
+                - {}
+              {{-else-}}
+                - path: {{$apiDetails.path}}
+              {{-end-}}
+      {{-end-}}
+      {{-if $apiDetails.fqdn-}}
+      - toFQDNs:
+          - matchName: {{$apiDetails.fqdn | quote}}
+        toPorts:
+          - ports:
+              {{-range $apiDetails.ports-}}
+              - port: {{. | quote}}
+                protocol: TCP
+              {{- if $.Values.http3-}}
+              - port: {{. | quote}}
+                protocol: UDP
+              {{-end-}}
+              {{-end-}}
+            serverNames:
+              - {{ $apiDetails.fqdn | quote}}
+            rules:
+              http:
+              {{-if or (empty $apiDetails.path) (eq $apiDetails.path "/") -}}
+                - {}
+              {{-else-}}
+                - path: {{$apiDetails.path}}
+              {{-end-}}
+      {{-end-}}
+  {{-end-}}
+{{-end-}}

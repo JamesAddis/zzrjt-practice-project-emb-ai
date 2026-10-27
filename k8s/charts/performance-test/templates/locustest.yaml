@@ -1,0 +1,110 @@
+---
+apiVersion: locust.io/v2
+kind: LocustTest
+metadata:
+  name:  {{ include "performance-test.fullName" . | quote }}
+  labels:
+    {{- include "performance-test.labels" . | nindent 4 }}
+spec:
+  workers: {{.Values.workers | default 5 }}
+  {{-with .Values.image-}}
+  {{-if .digest-}}
+  image: {{print .repository "@" .digest | quote}}
+  {{-else-}}
+  image: {{print .repository ":" (default (default "latest" $.Chart.AppVersion) .tag) | quote}}
+  {{-end-}}
+  {{-end-}}
+  imagePullPolicy: {{.Values.imagePullPolicy | default "IfNotPresent" | quote }}
+  {{-with .Values.imagePullSecrets-}}
+  imagePullSecrets:
+    {{ toYaml . |nindent 4}}
+  {{-end-}}
+  {{-with .Values.env-}}
+  env:
+    {{ toYaml . | nindent 4 }}
+  {{-end-}}
+  {{-if or .Values.securityContext .Values.podSecurityContext-}}
+  security:
+  {{-with .Values.podSecurityContext-}}
+    podSecurityContext:
+      {{ toYaml . | nindent 6 }}
+  {{-end--}}
+  {{-with .Values.securityContext-}}
+    securityContext:
+      {{ toYaml . | nindent 6 }}
+  {{-end-}}
+  {{-end-}}
+  {{-if or .Values.affinity .Values.tolerations .Values.nodeSelector .Values.runtimeClassName -}}
+  scheduling:
+    {{-with .Values.runtimeClassName-}}
+    runtimeClassName: {{ . | quote}}
+    {{-end-}}
+    {{-with .Values.nodeSelector-}}
+    nodeSelector:
+      {{ toYaml . | nindent 6 }}
+    {{-end-}}
+    {{-with .Values.tolerations-}}
+    tolerations:
+      {{ toYaml . | nindent 6 }}
+    {{-end-}}
+    {{-with .Values.affinity-}}
+    affinity: 
+      {{ toYaml . | nindent 6 }}
+    {{-end-}}
+  {{-end-}}
+  master:
+    command: >
+      --locustfile /lotest/src/{{.Values.testFilePath}}
+      --host {{.Values.host}}
+      --run-time={{.Values.runTime | default "10m"}}
+      --users={{.Values.users | default 500}}
+      --spawn-rate={{.Values.spawnRate | default 50}}
+    {{-if or .Values.podAnnotations .Values.master.annotations-}}
+    annotations:
+      {{-with .Values.podAnnotations-}}
+      {{ toYaml . | nindent 6}}
+      {{-end-}}
+      {{-with .Values.master.annotations-}}
+      {{ toYaml . | nindent 6}}
+      {{-end-}}
+    {{-end-}}
+    labels:
+      {{- include "performance-test.masterLabels" . | nindent 6 }}
+    {{-if or .Values.resources .Values.master.resources-}}
+    resources:
+      {{-with .Values.resources-}}
+      {{ toYaml . | nindent 6}}
+      {{-end-}}
+      {{-with .Values.master.resources-}}
+      {{ toYaml . | nindent 6}}
+      {{-end-}}
+    {{-end-}}
+  worker:
+    {{-with .Values.replicas-}}
+      replicas: {{ . }}
+    {{-end-}}
+    {{-if or .Values.podAnnotations .Values.worker.annotations-}}
+    annotations:
+    {{-with .Values.podAnnotations-}}
+      {{ toYaml . | nindent 6}}
+    {{-end-}}
+    {{-with .Values.worker.annotations-}}
+      {{ toYaml . | nindent 6}}
+    {{-end-}}
+    {{-end-}}
+    labels:
+      {{- include "performance-test.workerLabels" . | nindent 6 }}
+    {{-if or .Values.resources .Values.worker.resources-}}
+    resources:
+    {{-with .Values.resources-}}
+      {{ toYaml . | nindent 6}}
+    {{-end-}}
+    {{-with .Values.worker.resources-}}
+      {{ toYaml . | nindent 6}}
+    {{-end-}}
+    {{-end-}}
+  {{-with .Values.otel-}}
+  observability:
+    {{ toYaml . |nindent 4}}
+  {{-end-}}
+{{-end-}}

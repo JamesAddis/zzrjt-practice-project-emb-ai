@@ -1,0 +1,152 @@
+{{-if and .Values.cilium.enabled .Values.cilium.hostPolicy.enabled (or .Values.nodeSelector .Values.cilium.hostPolicy.egressSelector) (or .Values.cilium.hostPolicy.website .Values.cilium.hostPolicy.restApi)-}}
+apiVersion: "cilium.io/v2"
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: {{ print .Chart.Namespace "-" (include "practice-project.fullname" .) }}
+  labels:
+    {{- include "practice-project.labels" . | nindent 4 }}
+specs:
+  {{-if .Values.cilium.hostPolicy.website -}}
+  {{-  $details:=(fromYaml (include "performance-test.route" .Values.website.url .))-}}
+  {{-  if empty .Values.hostPolicy.egressSelectors -}}
+  - description: Allow Master/Workers egress to Test Website/Webapp
+    nodeSelector:
+    {{  toYaml $.Values.nodeSelector | nindent 6 }}
+    egress:
+      {{-if $details.ip-}}
+      - toCIDRs:
+          - {{ $details.ip | quote}}
+        toPorts:
+          - ports:
+              {{-range $details.ports-}}
+              - port: {{. | quote}}
+                protocol: TCP
+              {{- if $.Values.website.http3-}}
+              - port: {{. | quote}}
+                protocol: UDP
+              {{-end-}}
+              {{-end-}}
+      {{-end-}}
+      {{-if $details.fqdn-}}
+      - toFQDNs:
+          - matchName: {{$details.fqdn | quote}}
+        toPorts:
+          - ports:
+              {{-range $details.ports-}}
+              - port: {{. | quote}}
+                protocol: TCP
+              {{- if $.Values.website.http3-}}
+              - port: {{. | quote}}
+                protocol: UDP
+              {{-end-}}
+              {{-end-}}
+      {{-end-}}
+  {{- else-}}
+  {{-    range $i, $egressSelector:= .Values.hostPolicy.egressSelectors -}}
+  - description: Allow Master/Workers egress to Test Website/Webapp ({{$i}})
+    endpointSelector:
+      matchLabels:
+        {{- include "performance-test.labels" . | nindent 8 }}
+    egress:
+      {{-if $details.ip-}}
+      - toCIDRs:
+          - {{ $details.ip | quote}}
+        toPorts:
+          - ports:
+              {{-range $details.ports-}}
+              - port: {{. | quote}}
+                protocol: TCP
+              {{- if $.Values.website.http3-}}
+              - port: {{. | quote}}
+                protocol: UDP
+              {{-end-}}
+              {{-end-}}
+      {{-end-}}
+      {{-if $details.fqdn-}}
+      - toFQDNs:
+          - matchName: {{$details.fqdn | quote}}
+        toPorts:
+          - ports:
+              {{-range $details.ports-}}
+              - port: {{. | quote}}
+                protocol: TCP
+              {{- if $.Values.website.http3-}}
+              - port: {{. | quote}}
+                protocol: UDP
+              {{-end-}}
+              {{-end-}}
+      {{-end-}}
+  {{-end-}}
+  {{-if .Values.cilium.hostPolicy.restApi -}}
+  {{-  $apiDetails:=(fromYaml (include "performance-test.route" .Values.restApi.url .))-}}
+  {{-  if empty .Values.hostPolicy.egressSelectors -}}
+  - description: Allow Master/Workers egress to Test REST API
+    nodeSelector:
+    {{  toYaml .Values.nodeSelector | nindent 6 }}
+    egress:
+      {{-  if $apiDetails.ip-}}
+      - toCIDRs:
+          - {{ $apiDetails.ip| quote}}
+        toPorts:
+          - ports:
+              {{-range $apiDetails.ports-}}
+              - port: {{. | quote}}
+                protocol: TCP
+              {{- if $.Values.restApi.http3-}}
+              - port: {{. | quote}}
+                protocol: UDP
+              {{-end-}}
+              {{-end-}}
+      {{-  end-}}
+      {{-  if $apiDetails.fqdn-}}
+      - toFQDNs:
+          - matchName: {{$apiDetails.fqdn | quote}}
+        toPorts:
+          - ports:
+              {{-range $apiDetails.ports-}}
+              - port: {{. | quote}}
+                protocol: TCP
+              {{- if $.Values.restApi.http3-}}
+              - port: {{. | quote}}
+                protocol: UDP
+              {{-end-}}
+              {{-end-}}
+      {{-  end-}}
+  {{-  else-}}
+  {{-    range $i, $egressSelector:= .Values.hostPolicy.egressSelectors -}}
+  - description: Allow Master/Workers egress to Test REST API ({{$i}})
+    endpointSelector:
+      {{   toYaml $egressSelector | nindent 6 }}
+    egress:
+      {{-  if $apiDetails.ip-}}
+      - toCIDRs:
+          - {{ $apiDetails.ip| quote}}
+        toPorts:
+          - ports:
+              {{-range $apiDetails.ports-}}
+              - port: {{. | quote}}
+                protocol: TCP
+              {{- if $.Values.restApi.http3-}}
+              - port: {{. | quote}}
+                protocol: UDP
+              {{-end-}}
+              {{-end-}}
+      {{-  end-}}
+      {{-  if $apiDetails.fqdn-}}
+      - toFQDNs:
+          - matchName: {{$apiDetails.fqdn | quote}}
+        toPorts:
+          - ports:
+              {{-range $apiDetails.ports-}}
+              - port: {{. | quote}}
+                protocol: TCP
+              {{- if $.Values.restApi.http3-}}
+              - port: {{. | quote}}
+                protocol: UDP
+              {{-end-}}
+              {{-end-}}
+      {{-  end-}}
+  {{-    end-}}
+  {{-  end-}}
+  {{-end-}}
+{{-end-}}
