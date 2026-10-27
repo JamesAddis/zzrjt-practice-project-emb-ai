@@ -1,0 +1,6 @@
+services:
+  chromium_driver:
+    image: ""
+  e2e_tests:
+    environment:
+      REMOTE_SERVER_URL: firefox_driver:4444

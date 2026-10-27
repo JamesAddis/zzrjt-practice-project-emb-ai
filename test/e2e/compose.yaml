@@ -1,0 +1,11 @@
+services:
+  test_server:
+    build:
+      context: ./../../src/
+      dockerfile: ./../../src/Containerfile
+  e2e_api:
+    build:
+      context: ./../../
+      dockerfile: ./../../src/Containerfile
+      
+    

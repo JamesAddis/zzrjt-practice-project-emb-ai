@@ -1,0 +1,6 @@
+services:
+  safari_driver:
+    image: ""
+  e2e_tests:
+    environment:
+      REMOTE_SERVER_URL: safari_driver:4444

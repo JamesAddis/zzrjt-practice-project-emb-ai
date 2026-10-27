@@ -1,0 +1,6 @@
+Containerfile
+*.containerfile
+*/Containerfile
+*/*.Containerfile
+compose.yaml
+compose.*.yaml

@@ -1,0 +1,8 @@
+services:
+  test_server:
+    environment:
+      AI_ENDPOINT: localai:5555/v1/
+  localai:
+    image: "ollama"
+    command: ""
+      
