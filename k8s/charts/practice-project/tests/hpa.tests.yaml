@@ -1,114 +1,80 @@
-suite: test deployment
+suite: test HPA
+includeCrds: true
+values:
+  - values.yaml
+release:
+  name: my-release
+  namespace: my-namespace
+  revision: 1
+  upgrade: true
+chart:
+  version: 1.0.0
+  appVersion: 1.0.0
 templates:
-  - deployment.yaml
+  - templates/_helpers.tpl
+  - templates/hpa.yaml
 tests:
-  - it: should use tag when digest not set
+  - it: should not render if autoscaling disabled
     set:
-      image.tag: tester
-      image.digest: ""
+      autoscaling.enabled: false
+      keda.enabled: false
+      knative.enabled: false
     asserts:
       - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:tester
-  - it: should use digest
+          of: HorizontalPodAutoscaler
+  - it: should not render if autoscaling enabled and KEDA enabled
     set:
-      image.tag: tester
-      image.digest: sha256:e2fd96aab9f74037ccbf7200f9512b02a999d47331acb8a23aee034a7abc4c3b
+      autoscaling.enabled: true
+      keda.enabled: true
+      knative.enabled: false
     asserts:
       - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx@sha256:e2fd96aab9f74037ccbf7200f9512b02a999d47331acb8a23aee034a7abc4c3b
-  - it: should add apparmor profile set to use
+          of: HorizontalPodAutoscaler
+  - it: should not render if autoscaling enabled and Knative enabled
     set:
-      image.tag: latest
+      autoscaling.enabled: true
+      keda.enabled: false
+      knative.enabled: true
     asserts:
       - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should add apparmor profile set to create apparmor
+          of: HorizontalPodAutoscaler
+  - it: should render if autoscaling enabled and KEDA/Knative disabled
     set:
-      image.tag: latest
+      autoscaling.enabled: true
+      keda.enabled: false
+      knative.enabled: false
     asserts:
       - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should add seccomp profile set to use
+          of: HorizontalPodAutoscaler
+  - it: should render correct metadata
     set:
-      image.tag: latest
+      autoscaling.enabled: true
+      keda.enabled: false
+      knative.enabled: false
     asserts:
       - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should add seccomp profile set to create
+          of: HorizontalPodAutoscaler
+  - it: should render correct min replicas
     set:
-      image.tag: latest
+      autoscaling.enabled: true
+      keda.enabled: false
+      knative.enabled: false
     asserts:
       - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should set filesystem as readonly if hardened
+          of: HorizontalPodAutoscaler
+  - it: should render correct max replicas
     set:
-      image.tag: latest
+      autoscaling.enabled: true
+      keda.enabled: false
+      knative.enabled: false
     asserts:
       - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should create empty dirs for for /var/logs, tmp, and /var/lib
+          of: HorizontalPodAutoscaler
+  - it: should render correct scaling metrics
     set:
-      image.tag: latest
+      autoscaling.enabled: true
+      keda.enabled: false
+      knative.enabled: false
     asserts:
       - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should create /etc/practice-project as projected volume with read only options
-    set:
-      image.tag: latest
-    asserts:
-      - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
+          of: HorizontalPodAutoscaler

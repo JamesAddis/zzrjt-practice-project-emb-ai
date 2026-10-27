@@ -1,0 +1,41 @@
+{{-if and .Values.testing.enabled .Values.testing.smoke -}}
+# Test app will allow ingress from required pods (keda/knative/httproute/udproute/healthchecks)
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "practice-project.fullname" . }}-test-smoke"
+  labels:
+    {{- include "practice-project.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  serviceAccountName: {{ include "practice-project.serviceAccountName" . }}
+  containers:
+    - name: test
+      image: {{ include "practice-project.testing.smokeImage"  |quote }}
+      command: ['python3']
+      args: ['/data/test_ingress.py']
+      environment:
+        OTEL_SDK_DISABLED: "false"
+        OTEL_EXPORTER_OTLP_ENDPOINT: {{.Values.otel.endpoint | quote}}
+      volumeMounts:
+        - name: test-script
+          mountPath: /data
+        - name: test-script
+          mountPath: /testdata
+        {{-with .Values.testing.volumeMounts-}}
+        {{ toYaml . | nindent 8 }}
+        {{-end-}}
+  volumes:
+    - name: test-script
+      configMap:
+        name: "{{ include "practice-project.fullname" . }}-test-ai"
+    - name: app-settings
+      configMap:
+        name: "{{ include "practice-project.fullname" . }}"
+    {{-with .Values.testing.volumes-}}
+    {{ toYaml . | nindent 4 }}
+    {{-end-}}
+  restartPolicy: Never
+{{-end-}}

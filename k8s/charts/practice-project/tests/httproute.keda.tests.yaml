@@ -1,0 +1,39 @@
+suite: test httproute KEDA setup
+includeCrds: true
+values:
+  - values.yaml
+release:
+  name: my-release
+  namespace: my-namespace
+  revision: 1
+  upgrade: true
+chart:
+  version: 1.0.0
+  appVersion: 1.0.0
+templates:
+  - templates/_helpers.tpl
+  - templates/httproute.yaml
+set:
+  httpRoute.enabled: true
+  autoscaling.enabled: true
+  keda.enabled: true
+  knative.enabled: false
+tests:
+  - it: should use KEDA service instead of standard service for httproute if KEDA enabled
+    asserts:
+      - isKind:
+          of: HTTPRoute
+  - it: should use custom KEDA url if set and KEDA enabled
+    set:
+      image.tag: tester
+      image.digest: ""
+    asserts:
+      - isKind:
+          of: HTTPRoute
+  - it: should use standard KEDA url if custom one is not set and KEDA enabled
+    set:
+      image.tag: tester
+      image.digest: ""
+    asserts:
+      - isKind:
+          of: HTTPRoute

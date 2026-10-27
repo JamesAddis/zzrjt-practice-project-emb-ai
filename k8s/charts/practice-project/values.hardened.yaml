@@ -36,7 +36,7 @@ volumeMounts:
   - name: var-log
     mountPath: /var/log
 
-sops:
+spo:
   enabled: true
   apparmor: 
     create: true
@@ -52,8 +52,7 @@ cilium:
       patterns: []
     otel: true
     oidc: true
-    konnectivity: false
-    gateway: false
+    konnectivity: true
     ingress:
       selectors: []
     httpRoute:

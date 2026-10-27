@@ -1,114 +1,54 @@
 suite: test service setup
+includeCrds: true
+values:
+  - values.yaml
+release:
+  name: my-release
+  namespace: my-namespace
+  revision: 1
+  upgrade: true
+chart:
+  version: 1.0.0
+  appVersion: 1.0.0
 templates:
-  - deployment.yaml
+  - templates/_helpers.tpl
+  - templates/service.yaml
 tests:
-  - it: should use tag when digest not set
-    set:
-      image.tag: tester
-      image.digest: ""
+  - it: should render service
     asserts:
       - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:tester
-  - it: should use digest
-    set:
-      image.tag: tester
-      image.digest: sha256:e2fd96aab9f74037ccbf7200f9512b02a999d47331acb8a23aee034a7abc4c3b
+          of: Service
+  - it: should render correct metadata labels
     asserts:
       - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx@sha256:e2fd96aab9f74037ccbf7200f9512b02a999d47331acb8a23aee034a7abc4c3b
-  - it: should add apparmor profile set to use
+          of: Service
+  - it: should render correct fullname
     set:
-      image.tag: latest
+      fullName: "aseqweqweqwe"
     asserts:
       - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should add apparmor profile set to create apparmor
+          of: Service
+  - it: should render correct partial name
     set:
-      image.tag: latest
+      fullName: "testmytester"
     asserts:
       - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should add seccomp profile set to use
+          of: Service
+  - it: should render correct override name
     set:
-      image.tag: latest
+      serviceAccount.fullName: "testmytester"
     asserts:
       - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should add seccomp profile set to create
+          of: Service
+  - it: should render correct ports
     set:
-      image.tag: latest
+      serviceaccount.automount: true
     asserts:
       - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should set filesystem as readonly if hardened
+          of: Service
+  - it: should render correct ports (alt)
     set:
-      image.tag: latest
+      serviceaccount.automount: false
     asserts:
       - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should create empty dirs for for /var/logs, tmp, and /var/lib
-    set:
-      image.tag: latest
-    asserts:
-      - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should create /etc/practice-project as projected volume with read only options
-    set:
-      image.tag: latest
-    asserts:
-      - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
+          of: Service

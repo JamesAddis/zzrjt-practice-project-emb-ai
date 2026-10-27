@@ -2,6 +2,19 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+ai:
+  endpoint: ""
+  http3: false
+oidc:
+  enabled: false
+  endpoint: ""
+  http3: false
+otel:
+  enabled: false
+  endpoint: ""
+  http3: false
+http3: false
+
 # This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
 replicaCount: 1
 
@@ -12,6 +25,7 @@ image:
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
+  digest: ""
 
 # This is for the secrets for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
 imagePullSecrets: []
@@ -72,6 +86,9 @@ ingress:
     # - secretName: chart-example-tls
     #   hosts:
     #     - chart-example.local
+
+udpRoute:
+  enabled: false
 
 # -- Expose the service via gateway-api HTTPRoute
 # Requires Gateway API resources and suitable controller installed within the cluster
@@ -159,3 +176,160 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+cilium:
+  enabled: false
+  networkPolicy:
+    enabled: false
+    dns:
+      enabled: true
+      selectors: []
+    ai: false
+    oidc: false
+    otel: false
+    httpRoute:
+      enabled: false
+      selectors: []
+    udpRoute:
+      enabled: false
+      selectors: []
+    ingress:
+      enabled: false
+      selectors: []
+  hostPolicy:
+    enabled: false
+    ai: false
+    oidc: false
+    otel: false
+  
+istio:
+  enabled: false
+keda:
+  enabled: false
+knative:
+  enabled: false
+networkPolicy:
+  enabled: false
+  defaultDeny:
+    egress: true
+    ingress: true
+  useClusterIpForFqdn: true
+  useDnsLookupForFqdn: true
+  dns:
+    enabled: true
+    selectors: []
+  ai:
+    enabled: true
+    selectors: []
+  otel:
+    enabled: true
+    selectors: []
+  oidc:
+    enabled: true
+    selectors: []
+  knative:
+    enabled: true
+    selectors: []
+  keda:
+    enabled: true
+    selectors: []
+  httpRoute:
+    enabled: true
+    selectors: []
+  udpRoute:
+    enabled: true
+    selectors: []
+  extraEgress:
+    enabled: false
+    selectors: []
+  extraIngress:
+    enabled: false
+    selectors: []
+spire:
+  enabled: false
+spo:
+  enabled: false
+  apparmor:
+    create: false
+  seccomp:
+    create: false
+# setup for testing
+testing:
+  enabled: false
+  # default image to use if not specified in specific tests
+  image:
+    name: ""
+    tag: ""
+    digest: ""
+  volumeMounts: []
+  volumes: []
+
+  dependencies:
+    enabled: true
+    # extra labels to use for dependency tests
+    labels: {}
+    annotations: {}
+    # image to use if in dependencies check
+    image:
+      name: ""
+      tag: ""
+      digest: ""
+    volumeMounts: []
+    volumes: []
+  egress:
+    enabled: true
+    # image to use if in network policy egress check
+    image:
+      name: ""
+      tag: ""
+      digest: ""
+    # extra labels to use for egress tests
+    labels: {}
+    annotations: {}
+    allowedUrls: []
+    deniedUrls: []
+    volumeMounts: []
+    volumes: []
+  ingress:
+    enabled: true
+    image:
+      name: ""
+      tag: ""
+      digest: ""
+    # extra labels to use for ingress tests
+    labels: {}
+    annotations: {}
+    serviceAccount: "default"
+    # labels to use for testing allowed ingress to app
+    allowListLabels: []
+    # labels to use for testing denied ingress to app
+    denyListLabels: []
+    volumeMounts: []
+    volumes: []
+  smoke:
+    enabled: false
+    labels: {}
+    annotations: {}
+    # setup
+    generateTempNetPol: true
+    generateTempServiceAccount: true
+    image:
+      name: ""
+      tag: ""
+      digest: ""
+    volumeMounts: []
+    volumes: []
+  e2e:
+    enabled: false
+    # extra labels to use for ingress tests
+    labels: {}
+    annotations: {}
+    generateTempNetPol: true
+    generateTempServiceAccount: true
+    image:
+      name: ""
+      tag: ""
+      digest: ""
+    volumeMounts: []
+    volumes: []
+    

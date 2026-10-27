@@ -1,0 +1,31 @@
+{{-if and .Values.testing.enabled .Values.testing.egress (or .Values.networkPolicy.enabled (.Values.cilium.enabled .Values.cilium.networkPolicy.enabled)) -}}
+# Test egress rules for app - tests only allowed access to certain urls, and protocols
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "practice-project.fullname" . }}-test-netpol-egress"
+  labels:
+    {{- include "practice-project.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  serviceAccountName: {{ include "practice-project.serviceAccountName" . }}
+  containers:
+    - name: test
+      image: {{ include "practice-project.testing.egressImage"  |quote }}
+      command: ['python3']
+      args: ['/data/test_egress.py']
+      environment:
+        OTEL_SDK_DISABLED: "false"
+        OTEL_EXPORTER_OTLP_ENDPOINT: {{.Values.otel.endpoint | quote}}
+      volumeMounts:
+        {{-with .Values.testing.volumeMounts-}}
+        {{ toYaml . | nindent 8 }}
+        {{-end-}}
+  volumes:
+    {{-with .Values.testing.volumes-}}
+    {{ toYaml . | nindent 4 }}
+    {{-end-}}
+  restartPolicy: Never
+{{-end-}}
