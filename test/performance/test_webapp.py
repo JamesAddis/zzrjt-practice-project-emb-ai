@@ -10,11 +10,7 @@ from locust_plugins.users.playwright import PageWithRetry, PlaywrightUser, Playw
 csvfile = open(config.PERFORMANCE_TEST_DATA)
 iter = csv.reader(csvfile)
 
-class TestWebApplication(PlaywrightUser):
-    host = config.PERFORMANCE_TEST_WEBSITE_URL
-
-    multiplier = config.PERFORMANCE_TEST_WEBSITE_INSTANCES  # run ten concurrent playwright sessions/browsers for each Locust user. This helps improve load generation efficiency.
-
+class TestIntegationWebApplication(PlaywrightUser):
     @task
     @pw
     async def successfulPrompting(self, page: PageWithRetry):
