@@ -1,0 +1,6 @@
+transformers=4.41.2
+torch=2.2.2
+accelarate==0.30.1
+numpy=1.26.4
+flask
+flask_cors

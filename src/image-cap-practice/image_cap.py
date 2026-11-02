@@ -10,7 +10,7 @@ model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-capt
 processor = AutoProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
 model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
 # Load your image, DON'T FORGET TO WRITE YOUR IMAGE NAME
-img_path = os.path.join(os.path.dirname(__file__), "local_images/cat.1.jpg")
+img_path = os.getenv("IMAGE_CAP_IMG_PATH",default=os.path.join(os.path.dirname(__file__), "local_images/cat.1.jpg"))
 # convert it into an RGB format 
 image = Image.open(img_path).convert('RGB')
 # You do not need a question for image captioning

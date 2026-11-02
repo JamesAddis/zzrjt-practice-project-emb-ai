@@ -10,7 +10,7 @@ processor = AutoProcessor.from_pretrained("Salesforce/blip-image-captioning-base
 model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
 
 # Specify the directory where your images are
-image_dir = os.path.join(os.path.dirname(__file__), "local_images")
+image_dir  = os.getenv("LOCAL_DIR_CAPTIONER_URL",default=os.path.join(os.path.dirname(__file__), "local_images"))
 image_exts = ["jpg", "jpeg", "png"]  # specify the image file extensions to search for
 text = "the image of"
 

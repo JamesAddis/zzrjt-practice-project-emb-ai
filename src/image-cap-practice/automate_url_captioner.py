@@ -1,4 +1,6 @@
 import requests
+import os
+
 from PIL import Image
 from io import BytesIO
 from bs4 import BeautifulSoup
@@ -9,7 +11,7 @@ processor = AutoProcessor.from_pretrained("Salesforce/blip-image-captioning-base
 model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
 
 # URL of the page to scrape
-url = "https://en.wikipedia.org/wiki/IBM"
+url = os.getenv("AUTOMATED_URL_CAPTIONER_URL",default="https://en.wikipedia.org/wiki/IBM")
 
 headers = {"User-Agent": "Mozilla/5.0"}
 response = requests.get(url, headers=headers)
@@ -23,8 +25,10 @@ with open("captions.txt", "w", encoding="utf-8") as caption_file:
     for idx, img_element in enumerate(img_elements, start=1):
         # Try different attributes
         img_url = img_element.get("src") or img_element.get("data-src")
+
         if not img_url and img_element.has_attr("srcset"):
             img_url = img_element["srcset"].split()[0]
+
         if not img_url:
             continue
 
@@ -35,8 +39,10 @@ with open("captions.txt", "w", encoding="utf-8") as caption_file:
         # Fix relative URLs
         if img_url.startswith("//"):
             img_url = "https:" + img_url
+
         elif img_url.startswith("/"):
             img_url = "https://en.wikipedia.org" + img_url
+
         elif not img_url.startswith("http"):
             continue
 
