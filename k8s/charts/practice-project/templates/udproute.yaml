@@ -1,4 +1,4 @@
-{{- if and .Values.http3 .Values.udpRoute.enabled -}}
+{{- if and .Values.http3 .Values.udpRoute.enabled (not .Values.knative.enabled) -}}
 {{- $fullName := include "practice-project.fullname" . -}}
 {{- $svcPort := .Values.service.port -}}
 apiVersion: gateway.networking.k8s.io/v1
@@ -32,21 +32,14 @@ spec:
     {{- end }}
       backendRefs:
         {{-if .Values.keda.enabled-}}
-        # todo
-        - name: {{ $fullName }}
-          port: {{ $svcPort }}
-          weight: 1
-        {{-else-}}
-        {{-if .Values.knative.enabled-}}
-        # todo
-        - name: {{ $fullName }}
-          port: {{ $svcPort }}
+        - name: {{.Values.keda.service | default "keda-add-ons-http-interceptor-proxy" | quote }}
+          namespace: {{ .Values.keda.namespace | default "keda" | quote }}
+          port: {{ .Values.keda.port | default 8080 }}
           weight: 1
         {{-else-}}
         - name: {{ $fullName }}
           port: {{ $svcPort }}
           weight: 1
-        {{-end-}}
         {{-end-}}
     {{- end }}
 {{- end }}

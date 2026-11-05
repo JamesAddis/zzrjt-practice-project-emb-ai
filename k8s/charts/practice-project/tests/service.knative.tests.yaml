@@ -1,0 +1,11 @@
+suite: test service with knative
+templates:
+  - service.yaml
+tests:
+  - it: should not render deployment when knative enabled
+    set:
+      knative.enabled: true
+    asserts:
+      - notFailedTemplate: {}
+      - hasDocuments:
+          count: 0

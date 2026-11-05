@@ -8,17 +8,23 @@ metadata:
     {{- include "practice-project.labels" . | nindent 4 }}
 spec:
   abstract:
+    executable:
+      allowedExecutables:
+        - /usr/share/practice-project
+      allowedLibraries:
+        - /etc/practice-project/secrets.d/*.pem
+        - /etc/practice-project/secrets.d/*.key
+        - /etc/practice-project/secrets.d/*.crt
     filesystem:
       readOnlyPaths:
         - /etc/practice-project/config
         - /etc/practice-project/config.d/*
         - /etc/practice-project/secrets.d/*
-      writeOnlyPaths:
-        - /var/log/practice-project/*.log
-        - /etc/practice-project/config.d/*
-        - /etc/practice-project/secrets.d/*
       readWritePaths: 
         - /var/tmp/practice-project/**/*
+        - /tmp/**/*
+      writeOnlyPaths:
+        - /var/log/practice-project/*.log
     network:
       allowRaw: false
       allowedProtocols:
