@@ -5,6 +5,13 @@ metadata:
   name: {{ include "practice-project.fullname" . }}
   labels:
     {{- include "practice-project.labels" . | nindent 4 }}
+    {{-with .Values.cilium.networkPolicy.labels-}}
+    {{ toYaml . | nident 4}}
+    {{-end-}}
+  {{-with .Values.cilium.networkPolicy.annotations-}}
+  annotations:
+    {{ toYaml . | nident 4}}
+  {{-end-}}
 {{-$aiDetails:=(fromYaml (include "practice-project.route" .Values.ai.endpoint))-}}
 {{-$otelDetails:=(dict) -}}
 {{-$oidcDetails:=(dict) -}}
@@ -63,7 +70,12 @@ specs:
         {{ toYaml include "practice-project.cilium.selector" . | nident 8 }}
     ingress:
       - fromEndpoints:
+          {{- if .Values.cilium.networkPolicy.keda.selectors-}}
           {{ toYaml .Values.cilium.networkPolicy.keda.selectors | nident 10}}
+          {{-else-}}
+          - matchLabels:
+              k8s:io.kubernetes.pod.namespace: kedacore
+          {{-end-}}
         toPorts:
           - ports:
               - port: "http"

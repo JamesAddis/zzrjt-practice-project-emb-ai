@@ -22,6 +22,50 @@ set:
   cilium.networkPolicy.otel: false
   cilium.networkPolicy.oidc: true
 tests:
+  - it: should not setup egress to OIDC FQDN endpoint if not enabled
+    set:
+      oidc.enabled: false
+      ai.endpoint: test.ai.lan
+      oidc.endpoint: example.identity.test
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - notContains:
+          path: specs
+          content:
+            description: Allow Pod egress to OIDC Endpoint
+          any: true
+      - notContains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "example.identity.test"
+          count: 1
+          any: true
+  - it: should not setup egress to OIDC FQDN endpoint if not enabled in cilium
+    set:
+      cilium.networkPolicy.oidc: false
+      ai.endpoint: test.ai.lan
+      oidc.endpoint: https://eqe.eo.oe
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - notContains:
+          path: specs
+          content:
+            description: Allow Pod egress to OIDC Endpoint
+          any: true
+      - notContains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "eqe.eo.oe"
+          count: 1
+          any: true
   - it: should setup egress to oidc FQDN endpoint 
     set:
       oidc.endpoint: test.oidc.lan
@@ -30,6 +74,11 @@ tests:
           of: CiliumNetworkPolicy
       - isNotNull:
           path: specs
+      - contains:
+          path: specs
+          content:
+            description: Allow Pod egress to OIDC Endpoint
+          any: true
       - isSome:
           path: specs[*].egress
       - contains:

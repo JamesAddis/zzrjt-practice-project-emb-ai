@@ -22,6 +22,28 @@ set:
   cilium.networkPolicy.otel: false
   cilium.networkPolicy.oidc: false
 tests:
+  - it: should not setup egress to AI FQDN endpoint if not enabled
+    set:
+      cilium.networkPolicy.ai: false
+      ai.endpoint: test.ai.lan
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - notContains:
+          path: specs
+          content:
+            description: Allow Pod egress to AI Endpoint
+          any: true
+      - notContains:
+          path: specs[*].egress
+          content:
+            toFQDNs:
+              - matchName: "test.ai.lan"
+          count: 1
+          any: true
+    
   - it: should setup egress to ai FQDN endpoint 
     set:
       ai.endpoint: test.ai.lan
@@ -30,6 +52,12 @@ tests:
           of: CiliumNetworkPolicy
       - isNotNull:
           path: specs
+      - contains:
+          path: specs
+          content:
+            description: Allow Pod egress to AI Endpoint
+          any: true
+          count: 1
       - isSome:
           path: specs[*].egress
       - contains:
@@ -72,6 +100,12 @@ tests:
           of: CiliumNetworkPolicy
       - isNotNull:
           path: specs
+      - contains:
+          path: specs
+          content:
+            description: Allow Pod egress to AI Endpoint
+          any: true
+          count: 1
       - isSome:
           path: specs[*].egress
       - contains:
@@ -118,6 +152,12 @@ tests:
           of: CiliumNetworkPolicy
       - isNotNull:
           path: specs
+      - contains:
+          path: specs
+          content:
+            description: Allow Pod egress to AI Endpoint
+          any: true
+          count: 1
       - isSome:
           path: specs[*].egress
       - contains:
@@ -151,6 +191,12 @@ tests:
           of: CiliumNetworkPolicy
       - isNotNull:
           path: specs
+      - contains:
+          path: specs
+          content:
+            description: Allow Pod egress to AI Endpoint
+          any: true
+          count: 1
       - isSome:
           path: specs[*].egress
       - contains:
@@ -219,6 +265,12 @@ tests:
           of: CiliumNetworkPolicy
       - isNotNull:
           path: specs
+      - contains:
+          path: specs
+          content:
+            description: Allow Pod egress to AI Endpoint
+          any: true
+          count: 1
       - isSome:
           path: specs[*].egress
       - contains:
@@ -254,6 +306,12 @@ tests:
           of: CiliumNetworkPolicy
       - isNotNull:
           path: specs
+      - contains:
+          path: specs
+          content:
+            description: Allow Pod egress to AI Endpoint
+          any: true
+          count: 1
       - isSome:
           path: specs[*].egress
       - contains:
@@ -291,6 +349,12 @@ tests:
           of: CiliumNetworkPolicy
       - isNotNull:
           path: specs
+      - contains:
+          path: specs
+          content:
+            description: Allow Pod egress to AI Endpoint
+          any: true
+          count: 1
       - isSome:
           path: specs[*].egress
       - contains:
@@ -330,6 +394,12 @@ tests:
           of: CiliumNetworkPolicy
       - isNotNull:
           path: specs
+      - contains:
+          path: specs
+          content:
+            description: Allow Pod egress to AI Endpoint
+          any: true
+          count: 1
       - isSome:
           path: specs[*].egress
       - contains:
@@ -363,6 +433,12 @@ tests:
           of: CiliumNetworkPolicy
       - isNotNull:
           path: specs
+      - contains:
+          path: specs
+          content:
+            description: Allow Pod egress to AI Endpoint
+          any: true
+          count: 1
       - isSome:
           path: specs[*].egress
       - contains:
@@ -396,6 +472,12 @@ tests:
           of: CiliumNetworkPolicy
       - isNotNull:
           path: specs
+      - contains:
+          path: specs
+          content:
+            description: Allow Pod egress to AI Endpoint
+          any: true
+          count: 1
       - isSome:
           path: specs[*].egress
       - contains:
@@ -429,6 +511,12 @@ tests:
           of: CiliumNetworkPolicy
       - isNotNull:
           path: specs
+      - contains:
+          path: specs
+          content:
+            description: Allow Pod egress to AI Endpoint
+          any: true
+          count: 1
       - isSome:
           path: specs[*].egress
       - contains:
@@ -462,6 +550,12 @@ tests:
           of: CiliumNetworkPolicy
       - isNotNull:
           path: specs
+      - contains:
+          path: specs
+          content:
+            description: Allow Pod egress to AI Endpoint
+          any: true
+          count: 1
       - isSome:
           path: specs[*].egress
       - contains:

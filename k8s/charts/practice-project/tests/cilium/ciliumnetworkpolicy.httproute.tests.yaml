@@ -20,22 +20,82 @@ set:
   cilium.networkPolicy.enabled: true
   cilium.networkPolicy.httpRoute.enabled: true
 tests:
+  - it: should not setup httproute ingress if not enabled
+    set:
+      http3: false
+      httpRoute.enabled: false
+      cilium.networkPolicy.httpRoute.selectors:
+        - matchLabels:
+            eq: ti
+            e2: rqwe
+        - matchExpressions:
+            - key: val
+              operator: In
+              values:
+               - least
+               - i
+               - could
+               - do
+      httpRoute.hostnames:
+        - least.i.could.do
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - notContains:
+          path: specs
+          content:
+            description: Allow Pod ingress for HTTPRoute
+          any: true
+
+  - it: should not setup httproute ingress if not enabled for firewall
+    set:
+      http3: false
+      httpRoute.enabled: true
+      cilium.networkPolicy.enabled: false
+      cilium.networkPolicy.httpRoute.selectors:
+        - matchLabels:
+            eq: ti
+            e2: rqwe
+        - matchExpressions:
+            - key: val
+              operator: In
+              values:
+               - least
+               - i
+               - could
+               - do
+      httpRoute.hostnames:
+        - least.i.could.do
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - notContains:
+          path: specs
+          content:
+            description: Allow Pod ingress for HTTPRoute
+          any: true
+  
   - it: should setup ingress for HTTPRoute handler
     set:
-      cilium.httpRoute.selectors:
+      cilium.networkPolicy.httpRoute.selectors:
         - matchLabels:
             test: test
         - matchExpressions:
             - key: tester
               operator: Exists
       httpRoute.hostnames:
-        - practice-project.host.internal
+        - practice-project.example.internal
     asserts:
       - isKind:
           of: CiliumNetworkPolicy
+  
   - it: should setup ingress for HTTPRoute different
     set:
-      cilium.httpRoute.selectors:
+      cilium.networkPolicy.httpRoute.selectors:
         - matchLabels:
             test: test
         - matchExpressions:
@@ -47,3 +107,101 @@ tests:
     asserts:
       - isKind:
           of: CiliumNetworkPolicy
+      - 
+  
+  - it: should setup httproute ingress
+    set:
+      cilium.networkPolicy.httpRoute.selectors:
+        - matchLabels:
+            test: test
+        - matchExpressions:
+            - key: tester
+              operator: Exists
+      httpRoute.hostnames:
+        - practice-project.example.internal
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs
+      - contains:
+          path: specs
+          content:
+            description: Allow Pod ingress for HTTPRoute
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].ingress
+          content:
+            fromEndpoints:
+              - matchLabels:
+                  test: test
+              - matchExpressions:
+                  - key: tester
+                    operator: Exists
+            toPorts:
+              - ports:
+                  - port: "http"
+                    protocol: TCP
+                  - port: "http3"
+                    protocol: UDP
+                rules:
+                  http: [{}]
+          count: 1
+          any: false
+  
+  - it: should setup httproute ingress alternative
+    set:
+      http3: false
+      cilium.networkPolicy.httpRoute.selectors:
+        - matchLabels:
+            eq: ti
+            e2: rqwe
+        - matchExpressions:
+            - key: val
+              operator: In
+              values:
+               - least
+               - i
+               - could
+               - do
+      httpRoute.hostnames:
+        - least.i.could.do
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs
+      - contains:
+          path: specs
+          content:
+            description: Allow Pod ingress for HTTPRoute
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].ingress
+          content:
+            fromEndpoints:
+              - matchLabels:
+                  eq: ti
+                  e2: rqwe
+              - matchExpressions:
+                  - key: val
+                    operator: In
+                    values:
+                    - least
+                    - i
+                    - could
+                    - do
+            toPorts:
+              - ports:
+                  - port: "http"
+                    protocol: TCP
+                rules:
+                  http: [{}]
+          count: 1
+          any: false

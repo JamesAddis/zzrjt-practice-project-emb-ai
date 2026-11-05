@@ -1,4 +1,4 @@
-suite: test Host firewall CiliumClusterwideNetworkpolicy includes OTEL endpoint
+suite: test Host firewall CiliumClusterwideNetworkpolicy basics
 templates:
   - templates/_helper.tpl
   - templates/ciliumclusterwidenetworkpolicy.yaml
@@ -14,8 +14,28 @@ chart:
   version: 1.0.0
   appVersion: 1.0.0
 set:
+  ai.endpoint: test.ai.lan
+  ai.http3: true
+  otel.enabled: true
+  otel.endpoint: test.otel.lan
+  otel.http3: true
+  oidc.enabled: true
+  oidc.endpoint: test.oidc.lan
+  oidc.http3: true
   cilium.enabled: true
   cilium.hostPolicy.enabled: true
+  cilium.hostPolicy.ai: true
+  cilium.hostPolicy.oidc: true
+  cilium.hostPolicy.otel: true
+  cilium.hostPolicy.egressSelector: 
+    - matchLabels:
+        test: test
+    - matchExpressions:
+        - operator: In
+          key: names
+          values:
+            - eqweq
+            - e232
 tests:
   - it: should not exist if cilium not enabled
     set:
@@ -38,3 +58,65 @@ tests:
           count: 1
       - isKind:
           of: CiliumClusterwideNetworkPolicy
+  - it: should setup correct metadata
+    asserts:
+      - notFailedTemplate: {}
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: CiliumClusterwideNetworkPolicy
+      - isNotNull:
+          path: metadata
+      - equals:
+          path: metadata.name
+          value: "my-namespace-my-release"
+      - equals:
+          path: metadata.labels
+          value:
+            helm.sh/chart: "practice-project-1.0.0"
+            app.kubernetes.io/name: practice-project
+            app.kubernetes.io/version: "1.0.0"
+            app.kubernetes.io/managed-by: helm
+            app.kubernetes.io/instance: my-release
+      - isNull: 
+          path: metadata.annotations
+  - it: should setup correct metadata alt release/data
+    set:
+      cilium.hostPolicy.labels:
+        dah: daweq
+      cilium.hostPolicy.annotations:
+        e23123kg: 243124g
+        eqkg: gretr
+    release:
+      name: app-val
+      namespace: testat-ada2
+      revision: 5
+      upgrade: true
+    chart:
+      version: 2.4.1
+      appVersion: 14.6.10
+    asserts:
+      - notFailedTemplate: {}
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: CiliumClusterwideNetworkPolicy
+      - isNotNull:
+          path: metadata
+      - equals:
+          path: metadata.name
+          value: "testat-ada2-app-val"
+      - equals:
+          path: metadata.labels
+          value:
+            helm.sh/chart: "practice-project-2.4.1"
+            app.kubernetes.io/name: practice-project
+            app.kubernetes.io/version: "14.6.10"
+            app.kubernetes.io/managed-by: helm
+            app.kubernetes.io/instance: app-val
+            dah: daweq
+      - equals:
+          path: metadata.annotations
+          value:
+            e23123kg: 243124g
+            eqkg: gretr

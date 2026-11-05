@@ -16,148 +16,205 @@ chart:
 set: 
   http3: true
   cilium.enabled: true
+  knative.enabled: true
   cilium.networkPolicy.enabled: true
-  cilium.httpRoute.enabled: true
-  cilium.networkPolicy.httpRoute.enabled: true
+  cilium.networkPolicy.knative.enabled: true
 tests:
-  - it: should setup egress to dns request server with AI fqdn
+  - it: should not setup knative ingress if not enabled
     set:
-      globals.cilium.enabled: true
-      ai.endpoint: test.ai.example.internal
+      http3: false
+      knative.enabled: false
+      cilium.networkPolicy.knative.selectors:
+        - matchLabels:
+            eq: ti
+            e2: rqwe
+        - matchExpressions:
+            - key: val
+              operator: In
+              values:
+               - least
+               - i
+               - could
+               - do
     asserts:
       - isKind:
           of: CiliumNetworkPolicy
-      - matchRegex:
+      - isNotNull:
           path: specs
-          pattern: -my-chart$
-      - equal:
-          path: egress[0].rules[*].ports[0].rules.dns[*]
-          value: test.ai.example.internal
+      - isSome:
+          path: specs
+      - notContains:
+          path: specs
+          content:
+            description: Allow Pod ingress for Knative
+          any: true
+      - notContains:
+          path: specs[*].ingress
+          content:
+            fromEndpoints:
+              - matchLabels:
+                  eq: ti
+                  e2: rqwe
+              - matchExpressions:
+                  - key: val
+                    operator: In
+                    values:
+                    - least
+                    - i
+                    - could
+                    - do
+            toPorts:
+              - ports:
+                  - port: "http"
+                    protocol: TCP
+                  - port: "http3"
+                    protocol: UDP
+                rules:
+                  http: [{}]
+          count: 1
+          any: false
+      - notContains:
+          path: specs[*].ingress
+          content:
+            fromEndpoints:
+              - matchLabels:
+                  k8s:io.kubernetes.pod.namespace: knative
+            toPorts:
+              - ports:
+                  - port: "http"
+                    protocol: TCP
+                  - port: "http3"
+                    protocol: UDP
+                rules:
+                  http: [{}]
+          count: 1
+          any: false
+    
+  - it: should not setup knative ingress if not enabled for firewall
+    set:
+      http3: false
+      cilium.networkPolicy.knative.enabled: false
+      cilium.networkPolicy.knative.selectors:
+        - matchLabels:
+            eq: ti
+            e2: rqwe
+        - matchExpressions:
+            - key: val
+              operator: In
+              values:
+               - least
+               - i
+               - could
+               - do
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs
+      - notContains:
+          path: specs
+          content:
+            description: Allow Pod ingress for Knative
+          any: true
+      - notContains:
+          path: specs[*].ingress
+          content:
+            fromEndpoints:
+              - matchLabels:
+                  eq: ti
+                  e2: rqwe
+              - matchExpressions:
+                  - key: val
+                    operator: In
+                    values:
+                    - least
+                    - i
+                    - could
+                    - do
+            toPorts:
+              - ports:
+                  - port: "http"
+                    protocol: TCP
+                rules:
+                  http: [{}]
+          count: 1
+          any: false
+
+  - it: should setup ingress for Knative handler with default selector if no selectors set
+    set:
+      cilium.networkPolicy.knative.selectors: []
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs
+      - contains:
+          path: specs
+          content:
+            description: Allow Pod ingress for Knative
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].ingress
+          content:
+            fromEndpoints:
+              - matchLabels:
+                  k8s:io.kubernetes.pod.namespace: knative
+            toPorts:
+              - ports:
+                  - port: "http"
+                    protocol: TCP
+                  - port: "http3"
+                    protocol: UDP
+                rules:
+                  http: [{}]
+          count: 1
+          any: false
+
+  - it: should setup ingress for Knative with custom selectors
+    set:
+      cilium.networkPolicy.knative.selectors:
+        - matchLabels:
+            test: test
+        - matchExpressions:
+            - key: tester
+              operator: Exists
+      knative.hostnames:
+        - practice-project.example.internal
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs
+      - contains:
+          path: specs
+          content:
+            description: Allow Pod ingress for Knative
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].ingress
+          content:
+            fromEndpoints:
+              - matchLabels:
+                  test: test
+              - matchExpressions:
+                  - key: tester
+                    operator: Exists
+            toPorts:
+              - ports:
+                  - port: "http"
+                    protocol: TCP
+                  - port: "http3"
+                    protocol: UDP
+                rules:
+                  http: [{}]
+          count: 1
+          any: false
   
-  - it: should setup egress to ai FQDN endpoint
-    set:
-      globals.cilium.enabled: true
-      ai.endpoint: test.ai.example.internal
-    asserts:
-      - isKind:
-          of: CiliumNetworkPolicy
-      - matchRegex:
-          path: specs
-          pattern: -my-chart$
-      - equal:
-          path: egress[0].rules[@_.toFQDNs[*].matchName == "test.ai.example.internal"]
-          value: test.ai.example.internal
-      - equal:
-          path: egress[0].rules[@_.toFQDNs[*].matchName == "test.ai.example.internal"].ports[*].ports
-          value: test.ai.example.internal
-  
-  - it: should setup egress to dns request server with AI fqdn
-    set:
-      globals.cilium.enabled: true
-      ai.endpoint: different.ai.example.lan
-    asserts:
-      - isKind:
-          of: CiliumNetworkPolicy
-      - matchRegex:
-          path: specs
-          pattern: -my-chart$
-      - equal:
-          path: egress[0].rules[*].ports[0].rules.dns[*]
-          value: nginx:tester
-  - it: should use digest
-    set:
-      image.tag: tester
-      image.digest: sha256:e2fd96aab9f74037ccbf7200f9512b02a999d47331acb8a23aee034a7abc4c3b
-    asserts:
-      - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx@sha256:e2fd96aab9f74037ccbf7200f9512b02a999d47331acb8a23aee034a7abc4c3b
-  - it: should add apparmor profile set to use
-    set:
-      image.tag: latest
-    asserts:
-      - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should add apparmor profile set to create apparmor
-    set:
-      image.tag: latest
-    asserts:
-      - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should add seccomp profile set to use
-    set:
-      image.tag: latest
-    asserts:
-      - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should add seccomp profile set to create
-    set:
-      image.tag: latest
-    asserts:
-      - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should set filesystem as readonly if hardened
-    set:
-      image.tag: latest
-    asserts:
-      - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should create empty dirs for for /var/logs, tmp, and /var/lib
-    set:
-      image.tag: latest
-    asserts:
-      - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest
-  - it: should create /etc/practice-project as projected volume with read only options
-    set:
-      image.tag: latest
-    asserts:
-      - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:latest

@@ -17,15 +17,48 @@ set:
   cilium.enabled: true
   cilium.hostPolicy.enabled: true
   cilium.hostPolicy.ai: true
+  cilium.hostPolicy.egressSelector: 
+    - matchExpressions:
+        - operator: In
+          key: names
+          values:
+            - eqweq
+            - e232
 tests:
   - it: should setup egress to ai FQDN endpoint 
     set:
       ai.endpoint: test.ai.lan
+      cilium.hostPolicy.egressSelector:
+        - matchLabels:
+            test: test
+        - matchExpressions:
+            - operator: Exists
+              key: Test
     asserts:
       - isKind:
-          of: CiliumNetworkPolicy
+          of: CiliumClusterwideNetworkPolicy
       - isNotNull:
           path: specs
+      - contains:
+          path: specs
+          content:
+            description: "Host egress to external AI Endpoint"
+            nodeselector:
+              matchLabels:
+                test: test
+          count: 1
+          any: true
+      - contains:
+          path: specs
+          content:
+            description: "Host egress to external AI Endpoint"
+            nodeselector:
+              matchExpressions:
+              - operator: Exists
+                key: Test
+                any: true
+          count: 1
+          any: true
       - isSome:
           path: specs[*].egress
       - contains:
@@ -33,7 +66,7 @@ tests:
           content:
             toFQDNs:
               - matchName: "test.ai.lan"
-          count: 1
+          count: 2
           any: true
       - contains:
           path: specs[*].egress
@@ -50,17 +83,29 @@ tests:
                     protocol: "TCP"
                   - port: "443"
                     protocol: "UDP"
-          count: 1
+          count: 2
           any: false
 
   - it: should setup egress to ai FQDN endpoint with prefix
     set:
       ai.endpoint: test.ai.lan/openai
+      cilium.hostPolicy.egressSelector:
+        - matchLabels:
+            e2e: e1
     asserts:
       - isKind:
-          of: CiliumNetworkPolicy
+          of: CiliumClusterwideNetworkPolicy
       - isNotNull:
           path: specs
+      - contains:
+          path: specs
+          content:
+            description: "Host egress to external AI Endpoint"
+            nodeselector:
+              matchLabels:
+                e2e: e1
+          count: 1
+          any: true
       - isSome:
           path: specs[*].egress
       - contains:
@@ -91,11 +136,42 @@ tests:
   - it: should setup egress to ai http FQDN endpoint 
     set:
       ai.endpoint: http://test.ai.example.internal
+      cilium.hostPolicy.egressSelector:
+        - matchExpressions:
+            - operator: In
+              key: names
+              values:
+                - eqweq
+                - e232
+        - matchLabels:
+            eqweq: test
     asserts:
       - isKind:
-          of: CiliumNetworkPolicy
+          of: CiliumClusterwideNetworkPolicy
       - isNotNull:
           path: specs
+      - contains:
+          path: specs
+          content:
+            description: "Host egress to external AI Endpoint"
+            nodeselector:
+              matchExpressions:
+                - operator: In
+                  key: names
+                  values:
+                    - eqweq
+                    - e232
+          count: 1
+          any: true
+      - contains:
+          path: specs
+          content:
+            description: "Host egress to external AI Endpoint"
+            nodeselector:
+              matchLabels:
+                eqweq: test
+          count: 1
+          any: true
       - isSome:
           path: specs[*].egress
       - contains:
@@ -103,7 +179,7 @@ tests:
           content:
             toFQDNs:
               - matchName: "test.ai.example.internal"
-          count: 1
+          count: 2
           any: true
       - contains:
           path: specs[*].egress
@@ -116,17 +192,29 @@ tests:
                     protocol: "TCP"
                   - port: "80"
                     protocol: "UDP"
-          count: 1
+          count: 2
           any: false
   
   - it: should setup egress to ai https FQDN endpoint
     set:
       ai.endpoint: https://different.test.example.com
+      cilium.hostPolicy.egressSelector:
+        - matchLabels:
+            eqweqwe: 3423423434f
     asserts:
       - isKind:
-          of: CiliumNetworkPolicy
+          of: CiliumClusterwideNetworkPolicy
       - isNotNull:
           path: specs
+      - contains:
+          path: specs
+          content:
+            description: "Host egress to external AI Endpoint"
+            nodeselector:
+              matchLabels:
+                eqweqwe: 3423423434f
+          count: 1
+          any: true
       - isSome:
           path: specs[*].egress
       - contains:
@@ -153,11 +241,55 @@ tests:
   - it: should setup egress to ai with custom port FQDN endpoint (test.ai.example.internal)
     set:
       ai.endpoint: extra-fine.lan:6666
+      cilium.hostPolicy.egressSelector: 
+        - matchExpressions:
+            - operator: In
+              key: names
+              values:
+                - eqweq
+                - e232
+        - matchLabels:
+            eqweq: test
+        - matchLabels:
+            ewqweqw: 3123da
+            asfqweqwe: gftdrte
     asserts:
       - isKind:
-          of: CiliumNetworkPolicy
+          of: CiliumClusterwideNetworkPolicy
       - isNotNull:
           path: specs
+      - contains:
+          path: specs
+          content:
+            description: "Host egress to external AI Endpoint"
+            nodeselector:
+              matchExpressions:
+                - operator: In
+                  key: names
+                  values:
+                    - eqweq
+                    - e232
+          count: 1
+          any: true
+      - contains:
+          path: specs
+          content:
+            description: "Host egress to external AI Endpoint"
+            nodeselector:
+              matchLabels:
+                eqweq: test
+          count: 1
+          any: true
+      - contains:
+          path: specs
+          content:
+            description: "Host egress to external AI Endpoint"
+            nodeselector:
+              matchLabels:
+                ewqweqw: 3123da
+                asfqweqwe: gftdrte
+          count: 1
+          any: true
       - isSome:
           path: specs[*].egress
       - contains:
@@ -165,7 +297,7 @@ tests:
           content:
             toFQDNs:
               - matchName: "extra-fine.lan"
-          count: 1
+          count: 3
           any: true
       - contains:
           path: specs[*].egress
@@ -178,17 +310,37 @@ tests:
                     protocol: "TCP"
                   - port: "6666"
                     protocol: "UDP"
-          count: 1
+          count: 3
           any: false
   
   - it: should setup egress to ai with https custom port FQDN endpoint (test.ai.example.internal)
     set:
       ai.endpoint: https://completely-different.lan:5053
+      cilium.hostPolicy.egressSelector: 
+        - matchExpressions:
+            - operator: In
+              key: names
+              values:
+                - eqweq
+                - e232
     asserts:
       - isKind:
-          of: CiliumNetworkPolicy
+          of: CiliumClusterwideNetworkPolicy
       - isNotNull:
           path: specs
+      - contains:
+          path: specs
+          content:
+            description: "Host egress to external AI Endpoint"
+            nodeselector:
+              matchExpressions:
+                - operator: In
+                  key: names
+                  values:
+                    - eqweq
+                    - e232
+          count: 1
+          any: true
       - isSome:
           path: specs[*].egress
       - contains:
@@ -217,7 +369,7 @@ tests:
       ai.endpoint: 10.2.2.50
     asserts:
       - isKind:
-          of: CiliumNetworkPolicy
+          of: CiliumClusterwideNetworkPolicy
       - isNotNull:
           path: specs
       - isSome:
@@ -252,7 +404,7 @@ tests:
       ai.endpoint: 10.2.2.50/prefix234
     asserts:
       - isKind:
-          of: CiliumNetworkPolicy
+          of: CiliumClusterwideNetworkPolicy
       - isNotNull:
           path: specs
       - isSome:
@@ -287,7 +439,7 @@ tests:
       ai.endpoint: http://172.16.20.20
     asserts:
       - isKind:
-          of: CiliumNetworkPolicy
+          of: CiliumClusterwideNetworkPolicy
       - isNotNull:
           path: specs
       - isSome:
@@ -318,7 +470,7 @@ tests:
       ai.endpoint: https://172.16.20.20
     asserts:
       - isKind:
-          of: CiliumNetworkPolicy
+          of: CiliumClusterwideNetworkPolicy
       - isNotNull:
           path: specs
       - isSome:
@@ -349,7 +501,7 @@ tests:
       ai.endpoint: 192.168.100.42:4545
     asserts:
       - isKind:
-          of: CiliumNetworkPolicy
+          of: CiliumClusterwideNetworkPolicy
       - isNotNull:
           path: specs
       - isSome:
@@ -380,7 +532,7 @@ tests:
       ai.endpoint: http://10.250.23.23:6666
     asserts:
       - isKind:
-          of: CiliumNetworkPolicy
+          of: CiliumClusterwideNetworkPolicy
       - isNotNull:
           path: specs
       - isSome:
@@ -411,7 +563,7 @@ tests:
       ai.endpoint: https://10.100.1.1:5053
     asserts:
       - isKind:
-          of: CiliumNetworkPolicy
+          of: CiliumClusterwideNetworkPolicy
       - isNotNull:
           path: specs
       - isSome:

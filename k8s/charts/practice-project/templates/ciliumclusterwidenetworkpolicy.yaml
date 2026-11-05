@@ -17,10 +17,17 @@ metadata:
   name: {{ print .Chart.namespace "-" (include "practice-project.fullname" .) | quote }}
   labels:
     {{- include "practice-project.labels" . | nindent 4 }}
+    {{-with .Values.cilium.hostPolicy.labels-}}
+    {{ toYaml . | nident 4}}
+    {{-end-}}
+  {{-with .Values.cilium.hostPolicy.annotations-}}
+  annotations:
+    {{ toYaml . | nident 4}}
+  {{-end-}}
 specs:
   {{-range $i, $value:= .Values.cilium.hostPolicy.egressSelector-}}
   {{-if $aiDetails -}}
-  - description: "Host egress to external AI Endpoint (nodeselector: {{$i}})"
+  - description: Host egress to external AI Endpoint
     nodeSelector:
       {{ toYaml $value | nident 6 }}
     egress:

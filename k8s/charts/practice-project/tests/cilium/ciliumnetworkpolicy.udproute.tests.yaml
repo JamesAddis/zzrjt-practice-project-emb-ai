@@ -13,29 +13,87 @@ release:
 chart:
   version: 1.0.0
   appVersion: 1.0.0
-set: 
+set:
   http3: true
   udpRoute.enabled: true
   cilium.enabled: true
   cilium.networkPolicy.enabled: true
   cilium.networkPolicy.udpRoute.enabled: true
 tests:
+  - it: should not setup udproute ingress if not enabled
+    set:
+      http3: false
+      udpRoute.enabled: false
+      cilium.networkPolicy.udpRoute.selectors:
+        - matchLabels:
+            eq: ti
+            e2: rqwe
+        - matchExpressions:
+            - key: val
+              operator: In
+              values:
+               - least
+               - i
+               - could
+               - do
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - notContains:
+          path: specs
+          content:
+            description: Allow Pod ingress for UDPRoute
+          any: true
+
+  - it: should not setup udproute ingress if not enabled for firewall
+    set:
+      http3: false
+      udpRoute.enabled: true
+      cilium.networkPolicy.enabled: false
+      cilium.networkPolicy.udpRoute.selectors:
+        - matchLabels:
+            eq: ti
+            e2: rqwe
+        - matchExpressions:
+            - key: val
+              operator: In
+              values:
+               - least
+               - i
+               - could
+               - do
+      udpRoute.hostnames:
+        - least.i.could.do
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - notContains:
+          path: specs
+          content:
+            description: Allow Pod ingress for UDPRoute
+          any: true
+  
   - it: should setup ingress for UDPRoute handler
     set:
-      cilium.udpRoute.selectors:
+      cilium.networkPolicy.udpRoute.selectors:
         - matchLabels:
             test: test
         - matchExpressions:
             - key: tester
               operator: Exists
       udpRoute.hostnames:
-        - practice-project.host.internal
+        - practice-project.example.internal
     asserts:
       - isKind:
           of: CiliumNetworkPolicy
+  
   - it: should setup ingress for UDPRoute different
     set:
-      cilium.udpRoute.selectors:
+      cilium.networkPolicy.udpRoute.selectors:
         - matchLabels:
             test: test
         - matchExpressions:
@@ -47,3 +105,101 @@ tests:
     asserts:
       - isKind:
           of: CiliumNetworkPolicy
+      - 
+  
+  - it: should setup udproute ingress
+    set:
+      cilium.networkPolicy.udpRoute.selectors:
+        - matchLabels:
+            test: test
+        - matchExpressions:
+            - key: tester
+              operator: Exists
+      udpRoute.hostnames:
+        - practice-project.example.internal
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs
+      - contains:
+          path: specs
+          content:
+            description: Allow Pod ingress for UDPRoute
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].ingress
+          content:
+            fromEndpoints:
+              - matchLabels:
+                  test: test
+              - matchExpressions:
+                  - key: tester
+                    operator: Exists
+            toPorts:
+              - ports:
+                  - port: "http"
+                    protocol: TCP
+                  - port: "http3"
+                    protocol: UDP
+                rules:
+                  http: [{}]
+          count: 1
+          any: false
+  
+  - it: should setup udproute ingress alternative
+    set:
+      http3: false
+      cilium.networkPolicy.udpRoute.selectors:
+        - matchLabels:
+            eq: ti
+            e2: rqwe
+        - matchExpressions:
+            - key: val
+              operator: In
+              values:
+               - least
+               - i
+               - could
+               - do
+      udpRoute.hostnames:
+        - least.i.could.do
+    asserts:
+      - isKind:
+          of: CiliumNetworkPolicy
+      - isNotNull:
+          path: specs
+      - isSome:
+          path: specs
+      - contains:
+          path: specs
+          content:
+            description: Allow Pod ingress for UDPRoute
+          count: 1
+          any: true
+      - contains:
+          path: specs[*].ingress
+          content:
+            fromEndpoints:
+              - matchLabels:
+                  eq: ti
+                  e2: rqwe
+              - matchExpressions:
+                  - key: val
+                    operator: In
+                    values:
+                    - least
+                    - i
+                    - could
+                    - do
+            toPorts:
+              - ports:
+                  - port: "http"
+                    protocol: TCP
+                rules:
+                  http: [{}]
+          count: 1
+          any: false
