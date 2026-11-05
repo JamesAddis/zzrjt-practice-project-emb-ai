@@ -1,4 +1,4 @@
-suite: test httproute setup
+suite: test HTTPRoute setup
 includeCrds: true
 values:
   - values.yaml
@@ -14,64 +14,110 @@ templates:
   - templates/_helpers.tpl
   - templates/httproute.yaml
 tests:
-  - it: should use standard service for httproute if KEDA/Knative not enabled
+  - it: should render httproute
     set:
-      httpRoute.enabled: true
-      autoscaling.enabled: true
-      knative.enabled: false
-      keda.enabled: false
+      service.port: 8443
+      keda.service: "custom-keda-service"
+      keda.namespace: "keda-alt"
+      keda.port: 9090
     asserts:
+      - notFailedTemplate: {}
+      - hasDocuments:
+          count: 1
       - isKind:
-          of: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
+          of: HTTPRoute
+      - isAPIVersion:
+          of: gateway.networking.k8s.io/v1
+  - it: should setup correct metadata
+    asserts:
       - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:tester
-  - it: should use standard service for httproute if autoscaling not enabled
-    set:
-      autoscaling.enabled: false
-      knative.enabled: true
-      keda.enabled: true
-    asserts:
-      - isKind:
-          of: Deployment
-      - matchRegex:
           path: metadata.name
-          pattern: -my-chart$
+          value: "my-namespace-my-release"
+  - it: should setup correct metadata name
+    asserts:
       - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:tester
-  - it: should render correct metadata
-    set:
-      autoscaling.enabled: true
-      keda.enabled: false
-      knative.enabled: false
+          path: metadata.name
+          value: "my-namespace-my-release"
+      - equal:
+          path: metadata.labels
+          value:
+            helm.sh/chart: "practice-project-1.0.0"
+            app.kubernetes.io/name: practice-project
+            app.kubernetes.io/version: "1.0.0"
+            app.kubernetes.io/managed-by: helm
+            app.kubernetes.io/instance: my-release
+  - it: should setup correct metadata alt labels
+    release:
+      name: app-val
+      namespace: testat-ada2
+      revision: 5
+      upgrade: true
+    chart:
+      version: 2.4.1
+      appVersion: 14.6.10
     asserts:
-      - isKind:
-          of: HTTPRoute
-  - it: should render correct hostnames
+      - equal:
+          path: spec.selector.matchLabels
+          value:
+            helm.sh/chart: "practice-project-2.4.1"
+            app.kubernetes.io/name: practice-project
+            app.kubernetes.io/version: "14.6.10"
+            app.kubernetes.io/managed-by: helm
+            app.kubernetes.io/instance: app-val
+  - it: should use httproute service
     set:
-      autoscaling.enabled: true
-      keda.enabled: false
-      knative.enabled: false
+      service.port: 8443
+      keda.service: "custom-keda-service"
+      keda.namespace: "keda-alt"
+      keda.port: 9090
     asserts:
-      - isKind:
-          of: HTTPRoute
-  - it: should render correct parentsRefs
+      - notContains:
+          path: spec.rules
+          content:
+            - backendRefs:
+                - name: "my-release"
+                  port: 8443
+                  weight: 1
+          any: true
+      - notContains:
+          path: spec.rules
+          content:
+            - backendRefs:
+                - name: "keda-add-ons-http-interceptor-proxy"
+                  namespace: "keda"
+                  port: 8080
+                  weight: 1
+          any: true
+      - contains:
+          path: spec.rules
+          content:
+            - backendRefs:
+                - name: "custom-keda-service"
+                  namespace: "keda-alt"
+                  port: 9090
+                  weight: 1
+          any: true
+  - it: should use httproute service with filters
     set:
-      autoscaling.enabled: true
-      keda.enabled: false
-      knative.enabled: false
+      service.port: 5656
+      keda.service: ""
+      keda.namespace: ""
+      keda.port: ""
     asserts:
-      - isKind:
-          of: HTTPRoute
-  - it: should render correct rules
-    set:
-      autoscaling.enabled: true
-      keda.enabled: false
-      knative.enabled: false
-    asserts:
-      - isKind:
-          of: HTTPRoute
+      - notContains:
+          path: spec.rules
+          content:
+            - backendRefs:
+                - name: "my-release"
+                  port: 5656
+                  weight: 1
+          any: true
+      - contains:
+          path: spec.rules
+          content:
+            - backendRefs:
+                - name: "keda-add-ons-http-interceptor-proxy"
+                  namespace: "keda"
+                  port: 8080
+                  weight: 1
+          any: true

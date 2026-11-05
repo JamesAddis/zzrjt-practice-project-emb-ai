@@ -2,7 +2,7 @@ suite: test service with knative
 templates:
   - service.yaml
 tests:
-  - it: should not render deployment when knative enabled
+  - it: should not render native k8s service when knative enabled
     set:
       knative.enabled: true
     asserts:

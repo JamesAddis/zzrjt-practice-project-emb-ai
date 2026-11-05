@@ -1,14 +1,38 @@
 suite: test deployment
 templates:
-  - deployment.yaml
+  - templates/_helper.tpl
+  - templates/deployment.yaml
 tests:
+  - it: should render deployment
+    asserts:
+      - notFailedTemplate: {}
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Deployment
+      - isAPIVersion:
+          of: apps/v1
+  - it: should setup correct metadata name
+    asserts:
+      - equal:
+          path: metadata.name
+          value: "my-namespace-my-release"
+  - it: should setup correct metadata labels
+    asserts:
+      - equal:
+          path: metadata.labels
+          value:
+            helm.sh/chart: "practice-project-1.0.0"
+            app.kubernetes.io/name: practice-project
+            app.kubernetes.io/version: "1.0.0"
+            app.kubernetes.io/managed-by: helm
+            app.kubernetes.io/instance: my-release
   - it: should use tag when digest not set
     set:
+      image.repository: ter/testeq
       image.tag: tester
       image.digest: ""
     asserts:
-      - isKind:
-          of: Deployment
       - matchRegex:
           path: metadata.name
           pattern: -my-chart$
@@ -22,6 +46,8 @@ tests:
     asserts:
       - isKind:
           of: Deployment
+      - isAPIVersion:
+          of: apps/v1
       - matchRegex:
           path: metadata.name
           pattern: -my-chart$
@@ -34,6 +60,8 @@ tests:
     asserts:
       - isKind:
           of: Deployment
+      - isAPIVersion:
+          of: apps/v1
       - matchRegex:
           path: metadata.name
           pattern: -my-chart$
@@ -46,6 +74,8 @@ tests:
     asserts:
       - isKind:
           of: Deployment
+      - isAPIVersion:
+          of: apps/v1
       - matchRegex:
           path: metadata.name
           pattern: -my-chart$
@@ -58,6 +88,8 @@ tests:
     asserts:
       - isKind:
           of: Deployment
+      - isAPIVersion:
+          of: apps/v1
       - matchRegex:
           path: metadata.name
           pattern: -my-chart$
@@ -82,6 +114,8 @@ tests:
     asserts:
       - isKind:
           of: Deployment
+      - isAPIVersion:
+          of: apps/v1
       - matchRegex:
           path: metadata.name
           pattern: -my-chart$
@@ -94,6 +128,8 @@ tests:
     asserts:
       - isKind:
           of: Deployment
+      - isAPIVersion:
+          of: apps/v1
       - matchRegex:
           path: metadata.name
           pattern: -my-chart$
@@ -106,6 +142,8 @@ tests:
     asserts:
       - isKind:
           of: Deployment
+      - isAPIVersion:
+          of: apps/v1
       - matchRegex:
           path: metadata.name
           pattern: -my-chart$

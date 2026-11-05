@@ -19,21 +19,64 @@ set:
   keda.enabled: true
   knative.enabled: false
 tests:
-  - it: should use KEDA service instead of standard service for httproute if KEDA enabled
-    asserts:
-      - isKind:
-          of: HTTPRoute
-  - it: should use custom KEDA url if set and KEDA enabled
+  - it: should use KEDA custom http add on service instead of native service
     set:
-      image.tag: tester
-      image.digest: ""
+      service.port: 8443
+      keda.service: "custom-keda-service"
+      keda.namespace: "keda-alt"
+      keda.port: 9090
     asserts:
       - isKind:
           of: HTTPRoute
-  - it: should use standard KEDA url if custom one is not set and KEDA enabled
+      - isAPIVersion:
+          of: gateway.networking.k8s.io/v1
+      - notContains:
+          path: spec.rules
+          content:
+            - backendRefs:
+                - name: "my-release"
+                  port: 8443
+                  weight: 1
+          any: true
+      - notContains:
+          path: spec.rules
+          content:
+            - backendRefs:
+                - name: "keda-add-ons-http-interceptor-proxy"
+                  namespace: "keda"
+                  port: 8080
+                  weight: 1
+          any: true
+      - contains:
+          path: spec.rules
+          content:
+            - backendRefs:
+                - name: "custom-keda-service"
+                  namespace: "keda-alt"
+                  port: 9090
+                  weight: 1
+          any: true
+  - it: should use KEDA http add on service instead of native service
     set:
-      image.tag: tester
-      image.digest: ""
+      service.port: 5656
+      keda.service: ""
+      keda.namespace: ""
+      keda.port: ""
     asserts:
-      - isKind:
-          of: HTTPRoute
+      - notContains:
+          path: spec.rules
+          content:
+            - backendRefs:
+                - name: "my-release"
+                  port: 5656
+                  weight: 1
+          any: true
+      - contains:
+          path: spec.rules
+          content:
+            - backendRefs:
+                - name: "keda-add-ons-http-interceptor-proxy"
+                  namespace: "keda"
+                  port: 8080
+                  weight: 1
+          any: true

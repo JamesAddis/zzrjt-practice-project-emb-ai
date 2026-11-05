@@ -21,7 +21,9 @@ tests:
       ai.endpoint: test.ai.example.internal
     asserts:
       - isKind:
-          of: CiliumNetworkPolicy
+          of: ConfigMap
+      - isAPIVersion:
+          of: v1
       - matchRegex:
           path: specs
           pattern: -my-chart$
@@ -35,7 +37,9 @@ tests:
       ai.endpoint: test.ai.example.internal
     asserts:
       - isKind:
-          of: CiliumNetworkPolicy
+          of: ConfigMap
+      - isAPIVersion:
+          of: v1
       - matchRegex:
           path: specs
           pattern: -my-chart$
@@ -52,7 +56,9 @@ tests:
       ai.endpoint: different.ai.example.lan
     asserts:
       - isKind:
-          of: CiliumNetworkPolicy
+          of: ConfigMap
+      - isAPIVersion:
+          of: v1
       - matchRegex:
           path: specs
           pattern: -my-chart$
@@ -65,7 +71,9 @@ tests:
       image.digest: sha256:e2fd96aab9f74037ccbf7200f9512b02a999d47331acb8a23aee034a7abc4c3b
     asserts:
       - isKind:
-          of: Deployment
+          of: ConfigMap
+      - isAPIVersion:
+          of: v1
       - matchRegex:
           path: metadata.name
           pattern: -my-chart$
@@ -77,7 +85,9 @@ tests:
       image.tag: latest
     asserts:
       - isKind:
-          of: Deployment
+          of: ConfigMap
+      - isAPIVersion:
+          of: v1
       - matchRegex:
           path: metadata.name
           pattern: -my-chart$
@@ -89,7 +99,9 @@ tests:
       image.tag: latest
     asserts:
       - isKind:
-          of: Deployment
+          of: ConfigMap
+      - isAPIVersion:
+          of: v1
       - matchRegex:
           path: metadata.name
           pattern: -my-chart$
@@ -101,7 +113,9 @@ tests:
       image.tag: latest
     asserts:
       - isKind:
-          of: Deployment
+          of: ConfigMap
+      - isAPIVersion:
+          of: v1
       - matchRegex:
           path: metadata.name
           pattern: -my-chart$
@@ -113,7 +127,9 @@ tests:
       image.tag: latest
     asserts:
       - isKind:
-          of: Deployment
+          of: ConfigMap
+      - isAPIVersion:
+          of: v1
       - matchRegex:
           path: metadata.name
           pattern: -my-chart$
@@ -125,7 +141,9 @@ tests:
       image.tag: latest
     asserts:
       - isKind:
-          of: Deployment
+          of: ConfigMap
+      - isAPIVersion:
+          of: v1
       - matchRegex:
           path: metadata.name
           pattern: -my-chart$
@@ -137,7 +155,9 @@ tests:
       image.tag: latest
     asserts:
       - isKind:
-          of: Deployment
+          of: ConfigMap
+      - isAPIVersion:
+          of: v1
       - matchRegex:
           path: metadata.name
           pattern: -my-chart$
@@ -149,7 +169,9 @@ tests:
       image.tag: latest
     asserts:
       - isKind:
-          of: Deployment
+          of: ConfigMap
+      - isAPIVersion:
+          of: v1
       - matchRegex:
           path: metadata.name
           pattern: -my-chart$

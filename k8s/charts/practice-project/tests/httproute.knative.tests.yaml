@@ -1,4 +1,4 @@
-suite: test httproute knative setup
+suite: test httproute setup with knative
 includeCrds: true
 values:
   - values.yaml
@@ -15,25 +15,10 @@ templates:
   - templates/httproute.yaml
 set:
   httpRoute.enabled: true
-  autoscaling.enabled: true
   knative.enabled: true
-  keda.enabled: false
 tests:
-  - it: should use knative service instead of standard service for httproute if knative enabled
+  - it: should not exist if knative enabled
     asserts:
-      - isKind:
-          of: HTTPRoute
-      
-  - it: should use custom knative url if set and knative enabled
-    set:
-      image.tag: tester
-      image.digest: ""
-    asserts:
-      - isKind:
-          of: HTTPRoute
-      - matchRegex:
-          path: metadata.name
-          pattern: -my-chart$
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: nginx:tester
+      - notFailedTemplate: {}
+      - hasDocuments:
+          count: 0

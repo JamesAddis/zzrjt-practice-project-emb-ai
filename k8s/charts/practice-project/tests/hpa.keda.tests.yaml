@@ -1,0 +1,25 @@
+suite: test HPA when KEDA
+includeCrds: true
+values:
+  - values.yaml
+release:
+  name: my-release
+  namespace: my-namespace
+  revision: 1
+  upgrade: true
+chart:
+  version: 1.0.0
+  appVersion: 1.0.0
+templates:
+  - templates/_helpers.tpl
+  - templates/hpa.yaml
+tests:
+  - it: should not render if KEDA enabled
+    set:
+      autoscaling.enabled: true
+      keda.enabled: true
+      knative.enabled: false
+    asserts:
+      - notFailedTemplate: {}
+      - hasDocuments:
+          count: 0

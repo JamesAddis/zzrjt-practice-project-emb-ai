@@ -20,7 +20,9 @@ tests:
       ai.endpoint: test.ai.example.internal
     asserts:
       - isKind:
-          of: CiliumNetworkPolicy
+          of: ConfigMap
+      - isAPIVersion:
+          of: v1
       - matchRegex:
           path: specs
           pattern: -my-chart$
