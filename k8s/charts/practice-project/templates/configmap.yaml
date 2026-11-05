@@ -9,12 +9,14 @@ data:
     server:
       port: {{ .Values.service.port | default 80  }}
     ai:
-      endpoint: {{ .Values.endpoint | quote }}
+      endpoint: {{ .Values.ai.endpoint | quote }}
+      http3: {{.Values.ai.http3}}
       headers:
         {{ toYaml .Values.ai.headers | nident 8 }}
     {{-if .Values.otel.enabled-}}
     otel:  
       enabled: true
+      http3: {{.Values.otel.http3}}
       endpoint: {{ .Values.otel.endpoint | quote }}
       headers:
         {{toYaml .Values.otel.headers | nident 8 }}
@@ -22,6 +24,7 @@ data:
     {{-if .Values.oidc.enabled-}}
     oidc:  
       enabled: true
+      http3: {{.Values.oidc.http3}}
       endpoint: {{ .Values.oidc.endpoint | quote }}
       headers:
         {{toYaml .Values.oidc.headers | nident 8 }}
