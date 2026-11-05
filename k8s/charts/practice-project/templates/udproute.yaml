@@ -31,8 +31,22 @@ spec:
       {{- toYaml . | nindent 8 }}
     {{- end }}
       backendRefs:
+        {{-if .Values.keda.enabled-}}
+        # todo
         - name: {{ $fullName }}
           port: {{ $svcPort }}
           weight: 1
+        {{-else-}}
+        {{-if .Values.knative.enabled-}}
+        # todo
+        - name: {{ $fullName }}
+          port: {{ $svcPort }}
+          weight: 1
+        {{-else-}}
+        - name: {{ $fullName }}
+          port: {{ $svcPort }}
+          weight: 1
+        {{-end-}}
+        {{-end-}}
     {{- end }}
 {{- end }}

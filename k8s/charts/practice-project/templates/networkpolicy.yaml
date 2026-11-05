@@ -85,8 +85,15 @@ spec:
         {{ toYaml .Values.networkPolicy.knative.selectors | nident 8}}
         {{-end-}}
         {{-end-}}
-        {{-if .Values.networkPolicy.knative.selectors-}}
-        {{ toYaml .Values.networkPolicy.knative.selectors | nident 8}}
+        {{-if and .Values.keda.enabled .Values.networkPolicy.keda.enabled-}}
+        # KEDA
+        {{-if empty .Values.networkPolicy.keda.selectors-}}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kedacore
+        {{-else-}}
+        {{ toYaml .Values.networkPolicy.keda.selectors | nident 8}}
+        {{-end-}}
         {{-end-}}
       ports:
         - port: "http"
@@ -182,7 +189,7 @@ spec:
         {{-end-}}
     {{-end-}}
     {{-if $aiDetails -}}
-    # OTEL
+    # AI
     - to:
         {{-if $aiDetails.ip-}}
         - ipBlock:
