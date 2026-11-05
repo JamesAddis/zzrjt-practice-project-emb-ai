@@ -30,6 +30,9 @@ docker-compose.*.yaml
 *.dockerignore
 .dockerignore
 
+containers/
+k8s/
+
 # nix
 shell.nix
 

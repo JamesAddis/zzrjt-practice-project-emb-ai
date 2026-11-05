@@ -1,0 +1,6 @@
+services:
+  integration-tests:
+    build:
+      context: ./../../
+      dockerfile: ./../../integration.containerfile
+    

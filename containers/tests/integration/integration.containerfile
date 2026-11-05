@@ -7,12 +7,15 @@ ARG PGID="1000"
 
 FROM python:${BUILD_TAG} AS build
 
-# setup permissions for folders (so they can be copied to scratch)
+# setup basic permissions
+RUN useradd -u $PUID -g $PGID practice-project
+
+# create folders required for app, so they can be copied to scratch
 RUN mkdir /etc/practice-project
 RUN mkdir /etc/practice-project/config.d
 RUN mkdir /etc/practice-project/secrets.d
 RUN mkdir -p /var/log/practice-project
-RUN useradd -u $PUID -g $PGID practice-project
+# setup permissions for created folders
 RUN chmod 640 /etc/practice-project
 RUN chmod 640 /etc/practice-project/config.d
 RUN chmod 640 /etc/practice-project/secrets.d
@@ -20,7 +23,7 @@ RUN chmod 660 /var/log/practice-project
 RUN chown root:practice-project /etc/practice-project
 RUN chown root:practice-project /var/log/practice-project
 
-# install
+# setup virtual environment and update required build dependencies
 RUN python3 -m venv /venv && \
     /venv/bin/pip install --upgrade pip && \
     /venv/bin/pip install --upgrade pyinstaller
@@ -35,24 +38,33 @@ FROM build-venv AS build-app
 COPY . /src
 WORKDIR /src
 RUN /venv/bin/pyinstaller --onefile --name "app" main.py
-# update
+
+# update permissions for app file
 RUN chmod 750 dist/*.exe
 RUN chown root:practice-project  dist/*.exe
+
+# copy default configuration files
 COPY /src/src/config.default /etc/practice-project/config
 COPY /src/src/config.default.d/* /etc/practice-project/config.d/
+
+# update default configuration files permissions
 RUN chmod 640 /etc/practice-project/config
 RUN chown root:practice-project /etc/practice-project/config
 RUN chown root:practice-project /etc/practice-project/config.d/*
 
 # Copy the app into a distroless image
-FROM scratch
+FROM scratch as runner
+
 # copy configuration/logs structure with permissions already set
 COPY --from=build-app /etc/practice-project/config /etc/practice-project/config
 COPY --from=build-app /etc/practice-project/config.d /etc/practice-project/config.d
 COPY --from=build-app /etc/practice-project/secrets.d /etc/practice-project/secrets.d
 COPY --from=build-app /var/log/practice-project /var/log/practice-project
 COPY --from=build-app /src/dist/app.exe /usr/share/practice-project
+
+# setup app user to have correct UID:GID so it can use the app and required folders
 USER $PUID:$PGID
+
 ENTRYPOINT ["/usr/share/practice-project"]
 
 

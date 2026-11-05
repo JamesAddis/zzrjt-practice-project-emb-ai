@@ -43,6 +43,7 @@ class TestE2EWebForm(unittest.TestCase):
 
         # get result from html element
         text_result=result.get_attribute('innerText')
+
         return text_result
     
     def _input_valid_submit_method(self, text_input, expected_label, expected_score_min, expected_score_max):

@@ -1,0 +1,30 @@
+abi <abi/4.0>
+include <tunables/global>
+
+profile practice-project /usr/share/practice-project {
+  include <abstractions/base>
+
+  # allow TCP/UDP for HTTP
+  network inet tcp udp,
+
+  # allow reading configuration files 
+  /etc/practice-project/config r,
+  /etc/practice-project/config.d/* r,
+
+  # allow reading of secrets 
+  /etc/practice-project/secrets.d/* r,
+
+  # allow execute pem/crt/key files
+  /etc/practice-project/secrets.d/*.pem rx,
+  /etc/practice-project/secrets.d/*.crt rx,
+  /etc/practice-project/secrets.d/*.key rx,
+
+  # allow for writing logs
+  /var/log/practice-project/*.log w,
+
+  # allow for writing tmp files for caching uploaded files and such
+  /var/tmp/practice-project/**/* rw,
+
+  # extend with local apparmor profile
+  include "local/practice-project"
+}
