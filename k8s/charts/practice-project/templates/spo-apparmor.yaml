@@ -8,23 +8,40 @@ metadata:
     {{- include "practice-project.labels" . | nindent 4 }}
 spec:
   abstract:
+    {{-with .Values.spo.apparmor-}}
     executable:
       allowedExecutables:
         - /usr/share/practice-project
+        {{-with .allowedExecutables-}}
+        {{ toYaml . | nindent 8}}
+        {{-end-}}
       allowedLibraries:
         - /etc/practice-project/secrets.d/*.pem
         - /etc/practice-project/secrets.d/*.key
         - /etc/practice-project/secrets.d/*.crt
+        {{-with .allowedLibraries-}}
+        {{ toYaml . | nindent 8 }}
+        {{-end-}}
     filesystem:
       readOnlyPaths:
         - /etc/practice-project/config
         - /etc/practice-project/config.d/*
         - /etc/practice-project/secrets.d/*
+        {{-with .readOnlyPaths-}}
+        {{ toYaml . | nindent 8 }}
+        {{-end-}}
       readWritePaths: 
         - /var/tmp/practice-project/**/*
         - /tmp/**/*
+        {{-with .readWritePaths-}}
+        {{ toYaml . | nindent 8 }}
+        {{-end-}}
       writeOnlyPaths:
         - /var/log/practice-project/*.log
+        {{-with .writeOnlyPaths-}}
+        {{ toYaml . | nindent 8 }}
+        {{-end-}}
+    {{-end-}}
     network:
       allowRaw: false
       allowedProtocols:

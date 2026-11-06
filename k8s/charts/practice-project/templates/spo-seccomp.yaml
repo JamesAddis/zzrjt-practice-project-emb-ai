@@ -7,5 +7,5 @@ metadata:
   labels:
     {{- include "practice-project.labels" . | nindent 4 }}
 spec:
-  defaultAction: "SCMP_ACT_LOG"
+  defaultAction: {{ .Values.spo.seccomp.defaultAction | default "SCMP_ACT_LOG" | quote }}
 {{-end-}}

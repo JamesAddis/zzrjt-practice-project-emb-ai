@@ -40,6 +40,11 @@ spo:
   enabled: true
   apparmor: 
     create: true
+    allowedExecutables: []
+    allowedLibraries: []
+    readOnlyPaths: []
+    readWritePaths: []
+    writeOnlyPaths: []
   seccomp: 
     create: true
 cilium:
