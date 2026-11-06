@@ -61,6 +61,20 @@ Create the name of the service account to use
 {{- end }}
 {{- end }}
 
+{{/*
+Create the name of the apparmor to use
+*/}}
+{{- define "practice-project.apparmorName" -}}
+{{- default (include "practice-project.fullname" .) .Values.spo.apparmor.name }}
+{{- end }}
+
+{{/*
+Create the name of the seccomp to use
+*/}}
+{{- define "practice-project.seccompName" -}}
+{{- default (include "practice-project.fullname" .) .Values.spo.seccomp.name }}
+{{- end }}
+
 {{-define "practice-project.route"-}}
 {{-$ipv4Regex="(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"-}}
 {{-$ipv6Regex="^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:))$"-}}

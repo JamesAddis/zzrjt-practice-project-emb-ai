@@ -30,12 +30,12 @@ spec:
         {{-if and .Values.spo.enabled .Values.spo.apparmor.create-}}
         appArmorProfile:
           type: Localhost
-          localhostProfile: {{ print "local/" (include "practice-project.apparmorName" .) }}
+          localhostProfile: {{ include "practice-project.apparmorName" . | quote }}
         {{-end-}}
         {{-if and .Values.spo.enabled .Values.spo.seccomp.create-}}
         seccompProfile:
           type: Localhost
-          localhostProfile: {{ print "profiles/" (include "practice-project.seccompName" .) ".json" }}
+          localhostProfile: {{ print "operator/" (include "practice-project.seccompName" .) ".json" }}
         {{-end-}}
         {{-with .Values.podSecurityContext -}}
         {{- toYaml . | nindent 8 }}

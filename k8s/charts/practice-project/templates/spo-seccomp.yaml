@@ -3,9 +3,19 @@
 apiVersion: security-profiles-operator.x-k8s.io/v1
 kind: SeccompProfile
 metadata:
-  name: {{ include "practice-project.fullname" . }}
+  name: {{ include "practice-project.seccompName" . }}
   labels:
     {{- include "practice-project.labels" . | nindent 4 }}
 spec:
-  defaultAction: {{ .Values.spo.seccomp.defaultAction | default "SCMP_ACT_LOG" | quote }}
+  {{-with .Values.spo.seccomp-}}
+  defaultAction: {{ .defaultAction | default "SCMP_ACT_LOG" | quote }}
+  {{with .architectures}}
+  architectures:
+    {{ toYaml . | nindent 4}}
+  {{-end-}}
+  syscalls:
+  {{with .syscalls}}
+    {{ toYaml . | nindent 4}}
+  {{-end-}}
+  {{-end-}}
 {{-end-}}
